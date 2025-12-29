@@ -3,5 +3,5 @@
   "cSpell.words": [
     "Autovalidate"
   ],
-  "java.configuration.updateBuildConfiguration": "interactive"
+  "java.configuration.updateBuildConfiguration": "disabled"
 }
