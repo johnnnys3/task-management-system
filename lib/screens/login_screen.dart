@@ -299,11 +299,11 @@ class _LoginScreenState extends State<LoginScreen> {
     return DropdownButtonFormField<String>(
       decoration: InputDecoration(
         labelText: 'Role',
-        border: OutlineInputBorder(),
+        border: const OutlineInputBorder(),
         filled: true,
         fillColor: Colors.white.withOpacity(0.1),
       ),
-      value: authService.selectedRole.isEmpty ? null : authService.selectedRole,
+      initialValue: authService.selectedRole.isEmpty ? null : authService.selectedRole,
       items: ['admin', 'regular'].map((role) {
         return DropdownMenuItem(
           value: role,
@@ -333,8 +333,8 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         child: _isLoading
-            ? CircularProgressIndicator(color: Colors.white)
-            : Text('Login', style: TextStyle(fontSize: 16)),
+            ? const CircularProgressIndicator(color: Colors.white)
+            : const Text('Login', style: TextStyle(fontSize: 16)),
       ),
     );
   }

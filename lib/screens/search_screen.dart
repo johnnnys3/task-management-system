@@ -249,15 +249,15 @@ class _SearchScreenState extends State<SearchScreen> {
   /// Builds loading widget
   /// Shows centered loading indicator
   Widget _buildLoadingWidget() {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(
+          CircularProgressIndicator(
             strokeWidth: 3,
             valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Text(
             'Loading tasks...',
             style: TextStyle(

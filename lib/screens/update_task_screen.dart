@@ -544,7 +544,7 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
                   }
                 });
               },
-              activeColor: Theme.of(context).primaryColor,
+              activeThumbColor: Theme.of(context).primaryColor,
             ),
           ],
         ),

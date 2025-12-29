@@ -235,13 +235,13 @@ class _CreateTaskState extends State<CreateTask> {
   Widget _buildLoadingOverlay() {
     return Container(
       color: Colors.black.withOpacity(0.5),
-      child: Center(
+      child: const Center(
         child: Card(
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              children: const [
+              children: [
                 CircularProgressIndicator(),
                 SizedBox(height: 16),
                 Text('Creating task...'),
