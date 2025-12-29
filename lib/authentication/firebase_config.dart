@@ -4,7 +4,7 @@ class FirebaseConfig {
   static Future<void> initialize() async {
     try {
       await Firebase.initializeApp(
-        options: FirebaseOptions(
+        options: const FirebaseOptions(
           apiKey: "AIzaSyDKHy1BBdLfA4MiD5JTkwboHTf8QidSUEo",
           authDomain: "task-management-46e89.firebaseapp.com",
           projectId: "task-management-46e89",

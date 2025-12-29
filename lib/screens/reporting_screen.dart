@@ -7,6 +7,8 @@ import 'package:task_management/data/database_helper(task).dart';
 import 'package:task_management/models/task.dart';
 
 class ReportingScreen extends StatefulWidget {
+  const ReportingScreen({super.key});
+
   @override
   _ReportingScreenState createState() => _ReportingScreenState();
 }
@@ -16,7 +18,7 @@ class _ReportingScreenState extends State<ReportingScreen> {
   List<Task> _tasks = []; // All tasks
   bool _isLoading = true; // Loading state
   String _errorMessage = ''; // Error message for user feedback
-  String _selectedPeriod = 'All Time'; // Time period filter
+
   
   // Statistics variables
   int _totalTasks = 0;
@@ -65,10 +67,10 @@ class _ReportingScreenState extends State<ReportingScreen> {
     _totalTasks = _tasks.length;
     _completedTasks = _tasks.where((task) => task.isCompleted).length;
     _pendingTasks = _tasks.where((task) => !task.isCompleted).length;
-    _overdueTasks = _tasks.where((task) => 
-      !task.isCompleted && 
-      task.hasDueDate && 
-      task.dueDate.isBefore(now)
+    _overdueTasks = _tasks.where((task) =>
+      !task.isCompleted &&
+      task.dueDate != null &&
+      task.dueDate!.isBefore(now)
     ).length;
     
     _completionRate = _totalTasks > 0 
@@ -108,7 +110,6 @@ class _ReportingScreenState extends State<ReportingScreen> {
           tooltip: 'Filter by Period',
           onSelected: (String period) {
             setState(() {
-              _selectedPeriod = period;
               _calculateStatistics();
             });
           },
@@ -148,15 +149,15 @@ class _ReportingScreenState extends State<ReportingScreen> {
   /// Builds loading widget with modern styling
   /// Shows centered loading indicator with message
   Widget _buildLoadingWidget() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(
+          const CircularProgressIndicator(
             strokeWidth: 3,
             valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
             'Loading analytics...',
             style: TextStyle(
@@ -211,9 +212,9 @@ class _ReportingScreenState extends State<ReportingScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Title
-        Text(
+        const Text(
           'Task Overview',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
@@ -316,9 +317,9 @@ class _ReportingScreenState extends State<ReportingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'Completion Rate',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -385,9 +386,9 @@ class _ReportingScreenState extends State<ReportingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'Task Breakdown',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -491,9 +492,9 @@ class _ReportingScreenState extends State<ReportingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'Recent Activity',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -560,12 +561,12 @@ class _ReportingScreenState extends State<ReportingScreen> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (task.hasDueDate)
+                if (task.dueDate != null)
                   Text(
-                    'Due: ${DateFormat('MMM dd').format(task.dueDate)}',
+                    'Due: ${DateFormat('MMM dd').format(task.dueDate!)}',
                     style: TextStyle(
                       fontSize: 12,
-                      color: task.dueDate.isBefore(DateTime.now()) 
+                      color: task.dueDate!.isBefore(DateTime.now()) 
                           ? Colors.red 
                           : Colors.grey[600],
                     ),
@@ -622,7 +623,7 @@ class _ReportingScreenState extends State<ReportingScreen> {
             color: Colors.grey[400],
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'No tasks available',
             style: TextStyle(
               fontSize: 18,

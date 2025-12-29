@@ -18,7 +18,7 @@ class ProjectManagementScreen extends StatefulWidget {
   /// Admin status for permission control
   final bool isAdmin;
 
-  const ProjectManagementScreen({
+  const ProjectManagementScreen({super.key, 
     required this.userId, 
     required this.user, 
     required this.isAdmin
@@ -193,20 +193,20 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
   /// Builds loading widget with modern styling
   /// Shows centered loading indicator with message
   Widget _buildLoadingWidget() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(
+          const CircularProgressIndicator(
             strokeWidth: 3,
             valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
             'Loading projects...',
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey[600],
+              color: Colors.grey.shade600,
             ),
           ),
         ],
@@ -375,7 +375,7 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
               ),
               const SizedBox(height: 8),
               // Project description (if available)
-              if (project.description.isNotEmpty && project.description != null)
+              if (project.description.isNotEmpty)
                 Text(
                   project.description,
                   style: TextStyle(
@@ -527,15 +527,13 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
     );
   }
 
-  }
-
   /// Navigates to create project screen
   /// Handles result and updates project list
   Future<void> _navigateToCreateProjectScreen() async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CreateProjectScreen(),
+        builder: (context) => const CreateProjectScreen(),
       ),
     );
 
@@ -650,7 +648,7 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
     try {
       final projectService = ProjectService();
       await projectService.deleteProject(
-        projectId: project.id as String, 
+        projectId: project.id, 
         userId: widget.userId
       );
 
@@ -702,7 +700,7 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
         // Apply search filter
         final matchesSearch = _searchQuery.isEmpty ||
             project.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            (project.description?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
+            project.description.toLowerCase().contains(_searchQuery.toLowerCase());
         
         // Apply status filter
         final matchesFilter = _selectedFilter == 'All' ||

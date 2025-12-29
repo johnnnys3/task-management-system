@@ -38,8 +38,9 @@ class AuthenticationService extends ChangeNotifier {
   late StreamController<CustomUser?> _authStateController;
   late SharedPreferences prefs;
   final CollectionReference<Map<String, dynamic>> _userCollection =
-      FirebaseFirestore.instance.collection('users'); 
-      
+      FirebaseFirestore.instance.collection('users');
+  
+  bool _isRoleSelected = false;
   bool get isRoleSelected => _isRoleSelected;
   set isRoleSelected(bool value) {
     _isRoleSelected = value;
@@ -81,8 +82,8 @@ class AuthenticationService extends ChangeNotifier {
   }
 
   Future<void> init() async {
-    SharedPreferences.getInstance().then((_prefs) {
-      prefs = _prefs;
+    SharedPreferences.getInstance().then((prefs) {
+      prefs = prefs;
       _auth.authStateChanges().listen((User? user) {
         if (user == null) {
           _authStateController.add(null);
@@ -224,8 +225,8 @@ class AuthenticationService extends ChangeNotifier {
         return [];
       }
     } catch (error) {
-      print('Error fetching assigned members: $error');
-      throw error;
+      _logger.warning('Error fetching assigned members: $error');
+      rethrow;
     }
   }
 
@@ -234,12 +235,60 @@ class AuthenticationService extends ChangeNotifier {
       await _auth.signOut();
       _authStateController.add(null);
     } catch (e) {
-      print('SignOut Error: $e');
-      throw e;
+      _logger.warning('SignOut Error: $e');
+      rethrow;
     }
   }
 
+  @override
   void notifyListeners() {
     _authStateController.add(currentUser);
+  }
+
+  /// Validates sign in input parameters
+  void _validateSignInInput(String name, String email, String password) {
+    if (name.isEmpty) {
+      throw AuthValidationException('Name cannot be empty');
+    }
+    if (email.isEmpty || !email.contains('@')) {
+      throw AuthValidationException('Please enter a valid email');
+    }
+    if (password.length < 6) {
+      throw AuthValidationException('Password must be at least 6 characters');
+    }
+  }
+
+  /// Validates sign up input parameters
+  void _validateSignUpInput(String name, String email, String password, String role) {
+    _validateSignInInput(name, email, password);
+    if (role.isEmpty) {
+      throw AuthValidationException('Role must be selected');
+    }
+  }
+
+  /// Validates user role from Firestore
+  Future<void> _validateUserRole(String name, String email) async {
+    try {
+      final QuerySnapshot<Map<String, dynamic>> query = await _userCollection
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+      
+      if (query.docs.isEmpty) {
+        throw AuthUserNotFoundException('User not found in database');
+      }
+      
+      final userData = query.docs.first.data();
+      final storedRole = userData['role'] as String?;
+      
+      if (storedRole != selectedRole) {
+        throw AuthValidationException('Role mismatch for user');
+      }
+    } catch (e) {
+      if (e is AuthException) {
+        rethrow;
+      }
+      throw AuthNetworkException('Failed to validate user role');
+    }
   }
 }

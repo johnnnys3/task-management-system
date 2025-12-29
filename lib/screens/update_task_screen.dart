@@ -2,7 +2,6 @@
 /// Provides rich task editing interface with modern UI and validation
 /// Includes form validation, error handling, and user feedback
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:task_management/models/task.dart';
 import 'package:task_management/service/task_service.dart';
@@ -33,9 +32,10 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   
   // State variables
-  late DateTime _dueDate;
+  DateTime? _dueDate;
   bool _isCompleted = false;
-  String _priority = 'Medium';
+  TaskPriority _priority = TaskPriority.medium;
+  TaskStatus _status = TaskStatus.todo;
   bool _isLoading = false;
   String _errorMessage = '';
   
@@ -44,7 +44,8 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
   final FocusNode _descriptionFocusNode = FocusNode();
   
   // Priority options
-  final List<String> _priorityOptions = ['Low', 'Medium', 'High', 'Urgent'];
+  final List<TaskPriority> _priorityOptions = TaskPriority.values;
+  final List<TaskStatus> _statusOptions = TaskStatus.values;
 
   @override
   void initState() {
@@ -69,8 +70,9 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
     _titleController = TextEditingController(text: widget.task.title);
     _descriptionController = TextEditingController(text: widget.task.description);
     _dueDate = widget.task.dueDate;
-    _isCompleted = widget.task.isCompleted ?? false;
-    _priority = widget.task.priority ?? 'Medium';
+    _isCompleted = widget.task.isCompleted;
+    _priority = widget.task.priority;
+    _status = widget.task.status;
   }
 
   /// Updates task with validation and error handling
@@ -91,17 +93,14 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
       final String updatedTitle = _titleController.text.trim();
       final String updatedDescription = _descriptionController.text.trim();
 
-      // Create updated task object
-      final Task updatedTask = Task(
-        id: widget.task.id,
+      // Create updated task object using copyWith
+      final Task updatedTask = widget.task.copyWith(
         title: updatedTitle,
         description: updatedDescription,
         dueDate: _dueDate,
-        attachments: widget.task.attachments,
         isCompleted: _isCompleted,
         priority: _priority,
-        associatedProject: widget.task.associatedProject,
-        assignedMembers: widget.task.assignedMembers,
+        status: _status,
         updatedAt: DateTime.now(),
       );
 
@@ -115,14 +114,18 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
       );
 
       // Show success message and navigate back
-      _showSuccessSnackBar('Task updated successfully');
-      Navigator.pop(context, updatedTask);
+      if (mounted) {
+        _showSuccessSnackBar('Task updated successfully');
+        Navigator.pop(context, updatedTask);
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Error updating task: $e';
-        _isLoading = false;
-      });
-      _showErrorSnackBar('Failed to update task. Please try again.');
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Error updating task: $e';
+          _isLoading = false;
+        });
+        _showErrorSnackBar('Failed to update task. Please try again.');
+      }
     }
   }
 
@@ -222,18 +225,14 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
             // Priority selector
             _buildPriorityField(),
             const SizedBox(height: 24),
+            // Status selector
+            _buildStatusField(),
+            const SizedBox(height: 24),
             // Completion status toggle
             _buildCompletionToggle(),
             const SizedBox(height: 32),
             // Task information
             _buildTaskInformation(),
-            const SizedBox(height: 100), Peaks for bottom navigation; navigation
-         群的
-            ],
-和B
-            const SizedBox(heightantal
-            constameleon
-            ight
             const SizedBox(height: 100), // Space for bottom navigation
           ],
         ),
@@ -279,7 +278,7 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
   /// Shows loading indicator during operations
   Widget _buildLoadingOverlay() {
     return Container(
-      color: Colors.black.withOpacity(0.5),
+      color: Colors.black.withValues(alpha: 0.5),
       child: const Center(
         child: Card(
           child: Padding(
@@ -305,6 +304,10 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
       controller: _titleController,
       focusNode: _titleFocusNode,
       validator: _validateTitle,
+      textInputAction: TextInputAction.next,
+      onFieldSubmitted: (_) {
+        FocusScope.of(context).requestFocus(_descriptionFocusNode);
+      },
       decoration: InputDecoration(
         labelText: 'Task Title',
         hintText: 'Enter task title',
@@ -320,22 +323,14 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
           ),
         ),
         filled: true,
-        fillColor: Colors.grey[50],
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
+        fillColor: Colors.grey.shade50,
       ),
-      textInputAction: TextInputAction.next,
-      onFieldSubmitted: (_) {
-        FocusScope.of(context).requestFocus(_descriptionFocusNode);
-      },
       maxLength: 100,
       buildCounter: (context, {required currentLength, required isFocused, maxLength}) {
         return Text(
           '$currentLength/$maxLength',
           style: TextStyle(
-            color: currentLength > maxLength * 0.8 ? Colors.red : Colors.grey,
+            color: currentLength > (maxLength ?? 100) * 0.8 ? Colors.red : Colors.grey,
           ),
         );
       },
@@ -350,6 +345,7 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
       focusNode: _descriptionFocusNode,
       validator: _validateDescription,
       maxLines: 5,
+      textInputAction: TextInputAction.done,
       decoration: InputDecoration(
         labelText: 'Description',
         hintText: 'Enter task description',
@@ -365,19 +361,14 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
           ),
         ),
         filled: true,
-        fillColor: Colors.grey[50],
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
+        fillColor: Colors.grey.shade50,
       ),
-      textInputAction: TextInputAction.done,
       maxLength: 1000,
       buildCounter: (context, {required currentLength, required isFocused, maxLength}) {
         return Text(
           '$currentLength/$maxLength',
           style: TextStyle(
-            color: currentLength > maxLength * 0.8 ? Colors.red : Colors.grey,
+            color: currentLength > (maxLength ?? 1000) * 0.8 ? Colors.red : Colors.grey,
           ),
         );
       },
@@ -393,9 +384,9 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey[300]!),
+          border: Border.all(color: Colors.grey.shade300),
           borderRadius: BorderRadius.circular(12),
-          color: Colors.grey[50],
+          color: Colors.grey.shade50,
         ),
         child: Row(
           children: [
@@ -405,31 +396,19 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Due Date',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    DateFormat('MMM dd, yyyy').format(_dueDate),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+              child: Text(
+                _dueDate != null 
+                    ? DateFormat('MMM dd, yyyy').format(_dueDate!)
+                    : 'Select due date',
+                style: TextStyle(
+                  color: _dueDate != null ? Colors.black87 : Colors.grey.shade600,
+                  fontSize: 16,
+                ),
               ),
             ),
             Icon(
               Icons.arrow_drop_down,
-              color: Colors.grey[600],
+              color: Colors.grey.shade600,
             ),
           ],
         ),
@@ -437,227 +416,202 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
     );
   }
 
-  /// Builds priority field
-  /// Creates dropdown for priority selection
+  /// Builds priority selector
+  /// Creates dropdown with priority options
   Widget _buildPriorityField() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
+        border: Border.all(color: Colors.grey.shade300),
         borderRadius: BorderRadius.circular(12),
-        color: Colors.grey[50],
+        color: Colors.grey.shade50,
       ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.flag,
-            color: _getPriorityColor(_priority),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Priority',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<TaskPriority>(
+          value: _priority,
+          isExpanded: true,
+          items: _priorityOptions.map((priority) {
+            return DropdownMenuItem<TaskPriority>(
+              value: priority,
+              child: Row(
+                children: [
+                  Icon(
+                    _getPriorityIcon(priority),
+                    color: _getPriorityColor(priority),
+                    size: 20,
                   ),
-                ),
-                const SizedBox(height: 4),
-                DropdownButton<String>(
-                  value: _priority,
-                  isExpanded: true,
-                  underline: const SizedBox(),
-                  items: _priorityOptions.map((priority) {
-                    return DropdownMenuItem(
-                      value: priority,
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 12,
-                            height: 12,
-                            decoration: BoxDecoration(
-                              color: _getPriorityColor(priority),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(priority),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _priority = value!;
-                    });
-                  },
-                ),
-              ],
-            ),
-          ),
-        ],
+                  const SizedBox(width: 12),
+                  Text(
+                    priority.name.capitalize(),
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+          onChanged: (TaskPriority? newValue) {
+            if (newValue != null) {
+              setState(() {
+                _priority = newValue;
+              });
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Builds status selector
+  /// Creates dropdown with status options
+  Widget _buildStatusField() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.grey.shade50,
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<TaskStatus>(
+          value: _status,
+          isExpanded: true,
+          items: _statusOptions.map((status) {
+            return DropdownMenuItem<TaskStatus>(
+              value: status,
+              child: Row(
+                children: [
+                  Icon(
+                    _getStatusIcon(status),
+                    color: _getStatusColor(status),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    status.name.capitalize(),
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+          onChanged: (TaskStatus? newValue) {
+            if (newValue != null) {
+              setState(() {
+                _status = newValue;
+                // Auto-update completion status based on task status
+                _isCompleted = (newValue == TaskStatus.completed);
+              });
+            }
+          },
+        ),
       ),
     );
   }
 
   /// Builds completion toggle
-  /// Creates modern switch with label
+  /// Creates switch for task completion
   Widget _buildCompletionToggle() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(12),
-        color: Colors.grey[50],
-      ),
-      child: Row(
-        children: [
-          Icon(
-            _isCompleted ? Icons.check_circle : Icons.circle_outlined,
-            color: _isCompleted ? Colors.green : Colors.grey[600],
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Task Status',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _isCompleted ? 'Completed' : 'In Progress',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: _isCompleted ? Colors.green : Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: _isCompleted,
-            onChanged: (value) {
-              setState(() {
-                _isCompleted = value;
-              });
-            },
-            activeColor: Theme.of(context).primaryColor,
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Builds task information
-  /// Shows task details and statistics
-  Widget _buildTaskInformation() {
-    final isOverdue = !widget.task.isCompleted && 
-                     widget.task.dueDate.isBefore(DateTime.now());
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Task Information',
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
           children: [
-            // Priority card
-            _buildStatCard(
-              'Priority',
-              _priority,
-              Icons.flag,
-              _getPriorityColor(_priority),
+            Icon(
+              _isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
+              color: _isCompleted ? Colors.green : Colors.grey.shade600,
             ),
             const SizedBox(width: 12),
-            // Status card
-            _buildStatCard(
-              'Status',
-              widget.task.isCompleted ? 'Completed' : 'Active',
-              widget.task.isCompleted ? Icons.check_circle : Icons.pending,
-              widget.task.isCompleted ? Colors.green : Colors.orange,
+            const Text(
+              'Mark as completed',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const Spacer(),
+            Switch(
+              value: _isCompleted,
+              onChanged: (bool value) {
+                setState(() {
+                  _isCompleted = value;
+                  // Update status based on completion
+                  if (value) {
+                    _status = TaskStatus.completed;
+                  } else {
+                    _status = TaskStatus.todo;
+                  }
+                });
+              },
+              activeThumbColor: Theme.of(context).primaryColor,
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        // Due date status
-        if (isOverdue)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.red.shade50,
-              border: Border.all(color: Colors.red.shade200),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.warning, color: Colors.red.shade700),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'This task is overdue!',
-                    style: TextStyle(
-                      color: Colors.red.shade700,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
+      ),
     );
   }
 
-  /// Builds individual statistic card
-  /// Creates styled card for task information
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
-    return Expanded(
-      child: Card(
-        elevation: 2,
-        color: color.withOpacity(0.1),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Column(
-            children: [
-              Icon(icon, color: color, size: 24),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
+  /// Builds task information section
+  /// Shows current task details
+  Widget _buildTaskInformation() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Task Information',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).primaryColor,
               ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 16),
+            _buildInfoRow('Created', _formatDate(widget.task.createdAt)),
+            if (widget.task.updatedAt != null)
+              _buildInfoRow('Last Updated', _formatDate(widget.task.updatedAt!)),
+            if (widget.task.associatedProject != null)
+              _buildInfoRow('Project', widget.task.associatedProject!.name),
+            if (widget.task.assignedMembers.isNotEmpty)
+              _buildInfoRow('Assigned', '${widget.task.assignedMembers.length} member(s)'),
+          ],
         ),
+      ),
+    );
+  }
+
+  /// Builds information row
+  /// Creates styled row with label and value
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label:',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -671,7 +625,7 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -688,8 +642,18 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
+                side: BorderSide(
+                  color: Theme.of(context).primaryColor,
+                  width: 2,
+                ),
               ),
-              child: const Text('Cancel'),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Theme.of(context).primaryColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 16),
@@ -699,40 +663,6 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
               onPressed: _isLoading ? null : _updateTask,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).primaryColor,
-                foregroundColor: Colors.white,
-               apped: const theory
-                Niederlande
-                container
-               OC
-                paddingandle
-               tv
-               phan
-               AQ
-                paddinggenes
-                Union
-               irit
-                Berk
-               kin
-                wa
-                info
-               erne
-               纲要
-               ibs
-               平日
-                Craig
-               eded
-               穿透
-                simulate
-                Vander
-                Pru
-                Building
-               place
-                stup
-               整个过程
-                grape
-                spray
-或多
-                Islan
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -747,7 +677,13 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                  : const Text('Update Task'),
+                  : const Text(
+                      'Update Task',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ),
         ],
@@ -755,37 +691,20 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
     );
   }
 
-  /// Selects due date from date picker
-  /// Updates due date state when date is selected
+  /// Shows due date picker
+  /// Opens date selection dialog
   Future<void> _selectDueDate() async {
-    final DateTime? pickedDate = await showDatePicker(
+    final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _dueDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+      initialDate: _dueDate ?? DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
     );
     
-    if (pickedDate != null && pickedDate != _dueDate) {
+    if (picked != null && picked != _dueDate) {
       setState(() {
-        _dueDate = pickedDate;
+        _dueDate = picked;
       });
-    }
-  }
-
-  /// Gets priority color for display
-  /// Returns color based on priority level
-  Color _getPriorityColor(String priority) {
-    switch (priority.toLowerCase()) {
-      case 'urgent':
-        return Colors.red;
-      case 'high':
-        return Colors.orange;
-      case 'medium':
-        return Colors.blue;
-      case 'low':
-        return Colors.green;
-      default:
-        return Colors.grey;
     }
   }
 
@@ -849,5 +768,84 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
         ),
       ),
     );
+  }
+
+  /// Gets priority icon
+  /// Returns icon based on priority level
+  IconData _getPriorityIcon(TaskPriority priority) {
+    switch (priority) {
+      case TaskPriority.low:
+        return Icons.keyboard_arrow_down;
+      case TaskPriority.medium:
+        return Icons.remove;
+      case TaskPriority.high:
+        return Icons.keyboard_arrow_up;
+      case TaskPriority.urgent:
+        return Icons.priority_high;
+    }
+  }
+
+  /// Gets priority color
+  /// Returns color based on priority level
+  Color _getPriorityColor(TaskPriority priority) {
+    switch (priority) {
+      case TaskPriority.low:
+        return Colors.green;
+      case TaskPriority.medium:
+        return Colors.blue;
+      case TaskPriority.high:
+        return Colors.orange;
+      case TaskPriority.urgent:
+        return Colors.red;
+    }
+  }
+
+  /// Gets status icon
+  /// Returns icon based on task status
+  IconData _getStatusIcon(TaskStatus status) {
+    switch (status) {
+      case TaskStatus.todo:
+        return Icons.radio_button_unchecked;
+      case TaskStatus.inProgress:
+        return Icons.pending;
+      case TaskStatus.review:
+        return Icons.visibility;
+      case TaskStatus.completed:
+        return Icons.check_circle;
+      case TaskStatus.cancelled:
+        return Icons.cancel;
+    }
+  }
+
+  /// Gets status color
+  /// Returns color based on task status
+  Color _getStatusColor(TaskStatus status) {
+    switch (status) {
+      case TaskStatus.todo:
+        return Colors.grey;
+      case TaskStatus.inProgress:
+        return Colors.blue;
+      case TaskStatus.review:
+        return Colors.orange;
+      case TaskStatus.completed:
+        return Colors.green;
+      case TaskStatus.cancelled:
+        return Colors.red;
+    }
+  }
+
+  /// Formats date for display
+  /// Returns formatted date string
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'N/A';
+    return DateFormat('MMM dd, yyyy').format(date);
+  }
+}
+
+/// Extension for string capitalization
+extension StringExtension on String {
+  String capitalize() {
+    if (isEmpty) return this;
+    return '${this[0].toUpperCase()}${substring(1).toLowerCase()}';
   }
 }
