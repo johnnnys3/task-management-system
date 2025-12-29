@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:logging/logging.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:task_management/data/database_helper(task).dart';
 import 'package:task_management/models/task.dart';
+import 'package:task_management/data/database_helper(task).dart';
 
 
 
@@ -10,6 +11,8 @@ import 'package:task_management/models/task.dart';
 
 
 class TaskCalendar extends StatefulWidget {
+  const TaskCalendar({super.key});
+
   @override
   _TaskCalendarState createState() => _TaskCalendarState();
 }
@@ -19,7 +22,7 @@ class _TaskCalendarState extends State<TaskCalendar> {
   DateTime _selectedDay = DateTime.now(); // Currently selected date in calendar
   final TaskDatabase taskDatabase = TaskDatabase(); // Database instance for task operations
   List<Task>? _tasksForSelectedDay; // Tasks loaded for the selected day
-  Map<DateTime, List<Task>> _taskCache = {}; // Cache to store loaded tasks by date
+  final Map<DateTime, List<Task>> _taskCache = {}; // Cache to store loaded tasks by date
   bool _isLoading = false; // Loading state indicator
 
   @override
@@ -119,7 +122,7 @@ class _TaskCalendarState extends State<TaskCalendar> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Task Calendar'),
+        title: const Text('Task Calendar'),
       ),
       body: Column(
         children: [
@@ -156,6 +159,7 @@ class _TaskCalendarState extends State<TaskCalendar> {
 /// Widget for displaying individual task information
 /// Shows task status, details, and provides interaction options
 class TaskWidget extends StatelessWidget {
+  static final Logger _logger = Logger('TaskWidget');
   final Task task; // Task data to display
   final VoidCallback? onTaskUpdated; // Callback when task is updated
 
@@ -196,7 +200,7 @@ class TaskWidget extends StatelessWidget {
             const SizedBox(height: 4),
             // Formatted due date and time
             Text(
-              'Due: ${DateFormat.yMd().add_jm().format(task.dueDate)}',
+              'Due: ${task.dueDate != null ? DateFormat.yMd().add_jm().format(task.dueDate!) : 'No due date'}',
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 12,
@@ -265,31 +269,19 @@ class TaskWidget extends StatelessWidget {
   Future<void> _toggleTaskCompletion() async {
     try {
       // Create updated task with toggled completion status
-      final updatedTask = Task(
-        id: task.id,
-        title: task.title,
-        description: task.description,
-        dueDate: task.dueDate,
-        createdAt: task.createdAt,
+      final updatedTask = task.copyWith(
         isCompleted: !task.isCompleted,
-        hasDueDate: task.hasDueDate,
+        updatedAt: DateTime.now(),
       );
 
       // Update task in database
-      await TaskDatabase().updateTask(updatedTask);
+      await TaskDatabase().updateTaskWithObject(updatedTask);
       
       // Refresh task list to show updated status
       onTaskUpdated?.call();
     } catch (e) {
-      // Show error message if update fails
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update task: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      // Error logged but not shown to user as no context available
+      _logger.warning('Failed to toggle task completion: $e');
     }
   }
 
@@ -298,8 +290,10 @@ class TaskWidget extends StatelessWidget {
   Future<void> _editTask(BuildContext context) async {
     final titleController = TextEditingController(text: task.title);
     final descriptionController = TextEditingController(text: task.description);
-    DateTime selectedDate = task.dueDate;
-    TimeOfDay selectedTime = TimeOfDay.fromDateTime(task.dueDate);
+    DateTime? selectedDate = task.dueDate;
+    TimeOfDay selectedTime = task.dueDate != null 
+        ? TimeOfDay.fromDateTime(task.dueDate!)
+        : TimeOfDay.now();
     
     return showDialog(
       context: context,
@@ -334,13 +328,13 @@ class TaskWidget extends StatelessWidget {
                 ListTile(
                   title: const Text('Due Date'),
                   subtitle: Text(
-                    DateFormat.yMd().add_jm().format(selectedDate),
+                    DateFormat.yMd().add_jm().format(selectedDate ?? DateTime.now()),
                   ),
                   trailing: const Icon(Icons.calendar_today),
                   onTap: () async {
                     final DateTime? pickedDate = await showDatePicker(
                       context: context,
-                      initialDate: selectedDate,
+                      initialDate: selectedDate ?? DateTime.now(),
                       firstDate: DateTime.now(),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
@@ -385,18 +379,15 @@ class TaskWidget extends StatelessWidget {
                 
                 try {
                   // Create updated task with new values
-                  final updatedTask = Task(
-                    id: task.id,
+                  final updatedTask = task.copyWith(
                     title: titleController.text.trim(),
                     description: descriptionController.text.trim(),
                     dueDate: selectedDate,
-                    createdAt: task.createdAt,
-                    isCompleted: task.isCompleted,
-                    hasDueDate: true,
+                    updatedAt: DateTime.now(),
                   );
 
                   // Update task in database
-                  await TaskDatabase().updateTask(updatedTask);
+                  await TaskDatabase().updateTaskWithObject(updatedTask);
                   
                   // Close dialog and refresh task list
                   if (context.mounted) {

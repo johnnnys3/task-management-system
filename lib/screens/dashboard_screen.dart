@@ -12,6 +12,8 @@ enum TaskFilter { all, completed, pending, overdue }
 enum TaskSort { dueDate, title, createdDate }
 
 class TaskStatsPage extends StatefulWidget {
+  const TaskStatsPage({super.key});
+
   @override
   _TaskStatsPageState createState() => _TaskStatsPageState();
 }
@@ -47,7 +49,7 @@ class _TaskStatsPageState extends State<TaskStatsPage> {
 
     try {
       // Fetch all tasks from database
-      final fetchedTasks = await TaskDatabase.getTasks();
+      final fetchedTasks = await TaskDatabase().fetchTasks();
       if (mounted) {
         setState(() {
           tasks = fetchedTasks;
@@ -95,12 +97,11 @@ class _TaskStatsPageState extends State<TaskStatsPage> {
       case TaskFilter.overdue:
         result = result.where((task) => 
           !task.isCompleted && 
-          task.hasDueDate && 
-          task.dueDate.isBefore(DateTime.now())
+          task.dueDate != null &&
+          task.dueDate!.isBefore(DateTime.now())
         ).toList();
         break;
       case TaskFilter.all:
-      default:
         break; // Show all tasks
     }
 
@@ -109,16 +110,20 @@ class _TaskStatsPageState extends State<TaskStatsPage> {
       case TaskSort.dueDate:
         result.sort((a, b) {
           // Sort by due date, tasks without due dates go to end
-          if (!a.hasDueDate) return 1;
-          if (!b.hasDueDate) return -1;
-          return a.dueDate.compareTo(b.dueDate);
+          if (a.dueDate == null) return 1;
+          if (b.dueDate == null) return -1;
+          return a.dueDate!.compareTo(b.dueDate!);
         });
         break;
       case TaskSort.title:
         result.sort((a, b) => a.title.compareTo(b.title));
         break;
       case TaskSort.createdDate:
-        result.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        result.sort((a, b) {
+          if (a.createdAt == null) return 1;
+          if (b.createdAt == null) return -1;
+          return a.createdAt!.compareTo(b.createdAt!);
+        });
         break;
     }
 
@@ -268,8 +273,8 @@ class _TaskStatsPageState extends State<TaskStatsPage> {
     final pendingTasks = totalTasks - completedTasks;
     final overdueTasks = tasks!.where((t) => 
       !t.isCompleted && 
-      t.hasDueDate && 
-      t.dueDate.isBefore(DateTime.now())
+      t.dueDate != null &&
+      t.dueDate!.isBefore(DateTime.now())
     ).length;
 
     return Container(
@@ -420,11 +425,11 @@ class _TaskStatsPageState extends State<TaskStatsPage> {
 
   Widget _buildTaskCard(Task task) {
     final isOverdue = !task.isCompleted && 
-                     task.hasDueDate && 
-                     task.dueDate.isBefore(DateTime.now());
+                     task.dueDate != null && 
+                     task.dueDate!.isBefore(DateTime.now());
     final isDueSoon = !task.isCompleted && 
-                     task.hasDueDate && 
-                     task.dueDate.difference(DateTime.now()).inDays <= 3;
+                     task.dueDate != null && 
+                     task.dueDate!.difference(DateTime.now()).inDays <= 3;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -590,7 +595,9 @@ class _TaskStatsPageState extends State<TaskStatsPage> {
     );
   }
 
-  String _formatDueDate(DateTime dueDate) {
+  String _formatDueDate(DateTime? dueDate) {
+    if (dueDate == null) return 'No due date';
+    
     final now = DateTime.now();
     final difference = dueDate.difference(now);
     
@@ -621,9 +628,9 @@ class _TaskStatsPageState extends State<TaskStatsPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildDetailRow('Status', task.isCompleted ? 'Completed' : 'Pending'),
-                _buildDetailRow('Created', DateFormat.yMd().add_jm().format(task.createdAt)),
-                if (task.hasDueDate)
-                  _buildDetailRow('Due Date', DateFormat.yMd().add_jm().format(task.dueDate)),
+                _buildDetailRow('Created', task.createdAt != null ? DateFormat.yMd().add_jm().format(task.createdAt!) : 'Unknown'),
+                if (task.dueDate != null)
+                  _buildDetailRow('Due Date', DateFormat.yMd().add_jm().format(task.dueDate!)),
                 if (task.description.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   const Text(

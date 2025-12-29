@@ -7,7 +7,6 @@ import 'package:task_management/authentication/authentication_service.dart';
 import 'package:task_management/authentication/user.dart';
 import 'package:task_management/screens/calendar_integration_screen.dart';
 import 'package:task_management/screens/dashboard_screen.dart';
-import 'package:task_management/screens/login_screen.dart';
 import 'package:task_management/screens/notification_screen.dart';
 import 'package:task_management/screens/project_management_screen.dart';
 import 'package:task_management/screens/reporting_screen.dart';
@@ -52,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
       length: 2, // Two main tabs: Reports and Dashboard
       child: Scaffold(
         appBar: _buildAppBar(context), // Custom app bar with user info and actions
-        body: TabBarView(
+        body: const TabBarView(
           // Tab content: Reports and Dashboard
           children: [
             ReportingScreen(), // Analytics and reports
@@ -94,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                widget.user.name ?? 'User',
+                widget.user.name,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 14,
@@ -124,7 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
         IconButton(
           icon: const Icon(Icons.search),
           tooltip: 'Search Tasks',
-          onPressed: () => _navigateToScreen(SearchScreen()),
+          onPressed: () => _navigateToScreen(const SearchScreen()),
         ),
         // Logout button with loading state
         _isLoggingOut
@@ -143,8 +142,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
       ],
       // Tab navigation for main sections
-      bottom: TabBar(
-        tabs: const [
+      bottom: const TabBar(
+        tabs: [
           Tab(
             icon: Icon(Icons.insert_chart),
             text: 'Reports',
@@ -155,7 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
         indicatorColor: Colors.white,
-        labelStyle: const TextStyle(color: Colors.white),
+        labelStyle: TextStyle(color: Colors.white),
       ),
     );
   }
@@ -177,7 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final screen = _buildRoute(routeName);
       if (screen is Scaffold && 
-          (screen as Scaffold).body?.toString().contains('Invalid route name')) {
+          screen.body?.toString().contains('Invalid route name') == true) {
         _showErrorSnackBar('Navigation error: Invalid route');
         return;
       }
@@ -214,7 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
           userId: widget.userId, 
           user: widget.user, 
           isAdmin: widget.isAdmin, 
-          tasks: [], // Will be populated by the screen itself
+          tasks: const [], // Will be populated by the screen itself
         );
       case 'projectManagement':
         return ProjectManagementScreen(
@@ -243,11 +242,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: const TextStyle(fontSize: 18),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Please contact support if this issue persists.',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.grey[600],
+                    color: Colors.grey.shade600,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -265,7 +264,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirm Logout'),
-        content: Text('Are you sure you want to logout, ${widget.user.name ?? 'User'}?'),
+        content: Text('Are you sure you want to logout, ${widget.user.name}?'),
         actions: [
           // Cancel button - stays logged in
           TextButton(

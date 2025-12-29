@@ -106,7 +106,7 @@ class TaskDatabase {
 
   /// Updates an existing task using Task object
   Future<void> updateTaskWithObject(Task task) async {
-    if (task.id == null || task.id!.isEmpty) {
+    if (task.id.isEmpty) {
       throw TaskValidationException('Task ID is required for update');
     }
 
@@ -122,7 +122,7 @@ class TaskDatabase {
     } on FirebaseException catch (e) {
       if (e.code == 'not-found') {
         _logger.warning('Task not found for update: ${task.id}');
-        throw TaskNotFoundException(task.id!);
+        throw TaskNotFoundException(task.id);
       }
       _logger.severe('Firebase error updating task', e);
       throw TaskDatabaseException(
@@ -374,7 +374,7 @@ class TaskDatabase {
     try {
       final querySnapshot = await _tasksCollection
           .where('title', isGreaterThanOrEqualTo: query)
-          .where('title', isLessThanOrEqualTo: query + '\uf8ff')
+          .where('title', isLessThanOrEqualTo: '$query\uf8ff')
           .orderBy('title')
           .get();
 
@@ -441,7 +441,7 @@ class TaskDatabase {
     final batch = FirebaseFirestore.instance.batch();
     try {
       for (final task in tasks) {
-        if (task.id == null || task.id!.isEmpty) {
+        if (task.id.isEmpty) {
           throw TaskValidationException('All tasks must have IDs for batch update');
         }
         
@@ -480,7 +480,7 @@ class TaskDatabase {
     if (task.title.length > 200) {
       throw TaskValidationException('Task title must be less than 200 characters');
     }
-    if (task.description != null && task.description!.length > 1000) {
+    if (task.description.length > 1000) {
       throw TaskValidationException('Task description must be less than 1000 characters');
     }
   }

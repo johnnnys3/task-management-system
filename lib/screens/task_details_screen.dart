@@ -61,7 +61,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     final isOverdue = !widget.task.isCompleted && 
                      widget.task.hasDueDate && 
-                     widget.task.dueDate.isBefore(DateTime.now());
+                     widget.task.dueDate != null && widget.task.dueDate!.isBefore(DateTime.now());
     
     return AppBar(
       title: const Text(
@@ -317,7 +317,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             _buildDetailRow(
               Icons.calendar_today,
               'Due Date',
-              _formatDate(widget.task.dueDate),
+              widget.task.dueDate != null ? _formatDate(widget.task.dueDate!) : 'No due date',
               isOverdue: _isOverdue(),
             ),
             const SizedBox(height: 12),
@@ -325,15 +325,15 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             _buildDetailRow(
               Icons.add_circle,
               'Created',
-              _formatDate(widget.task.createdAt),
+              widget.task.createdAt != null ? _formatDate(widget.task.createdAt!) : 'Unknown',
             ),
             const SizedBox(height: 12),
             // Priority (if available)
-            if (widget.task.priority.isNotEmpty)
+            if (widget.task.priority.name.isNotEmpty)
               _buildDetailRow(
                 Icons.flag,
                 'Priority',
-                widget.task.priority,
+                widget.task.priority.name,
               ),
           ],
         ),
@@ -453,26 +453,26 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               ),
             ],
             // Project due date
-            if (project.dueDate != null) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(
-                    Icons.event,
+            ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(
+                  Icons.event,
+                  color: Colors.grey[600],
+                  size: 16,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Project due: ${_formatDate(project.dueDate)}',
+                  style: TextStyle(
+                    fontSize: 12,
                     color: Colors.grey[600],
-                    size: 16,
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Project due: ${_formatDate(project.dueDate!)}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
+          ],
           ],
         ),
       ),
@@ -637,7 +637,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   bool _isOverdue() {
     return !widget.task.isCompleted && 
            widget.task.hasDueDate && 
-           widget.task.dueDate.isBefore(DateTime.now());
+           widget.task.dueDate != null && widget.task.dueDate!.isBefore(DateTime.now());
   }
 
   /// Formats date for display
@@ -747,7 +747,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         await _tasksCollection.doc(widget.task.id).delete();
 
         // Update local state
-        Provider.of<TaskListNotifier>(context, listen: false).removeTask(widget.task.id);
+        Provider.of<TaskListNotifier>(context, listen: false).deleteTask(widget.task.id);
 
         setState(() {
           _isLoading = false;

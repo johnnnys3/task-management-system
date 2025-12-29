@@ -139,7 +139,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
       case 'Overdue':
         return !task.isCompleted && 
                task.hasDueDate && 
-               task.dueDate.isBefore(DateTime.now());
+               task.dueDate != null && task.dueDate!.isBefore(DateTime.now());
       default:
         return true; // 'All' filter
     }
@@ -151,13 +151,15 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
     setState(() {
       switch (_selectedSort) {
         case 'Due Date':
-          _filteredTasks.sort((a, b) => a.dueDate.compareTo(b.dueDate));
+          _filteredTasks.sort((a, b) => 
+            (a.dueDate ?? DateTime(9999)).compareTo(b.dueDate ?? DateTime(9999)));
           break;
         case 'Priority':
-          _filteredTasks.sort((a, b) => _getPriorityValue(a.priority).compareTo(_getPriorityValue(b.priority)));
+          _filteredTasks.sort((a, b) => _getPriorityValue(a.priority.name).compareTo(_getPriorityValue(b.priority.name)));
           break;
         case 'Created Date':
-          _filteredTasks.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+          _filteredTasks.sort((a, b) => 
+            (a.createdAt ?? DateTime(0)).compareTo(b.createdAt ?? DateTime(0)));
           break;
         case 'Title':
           _filteredTasks.sort((a, b) => a.title.compareTo(b.title));
@@ -244,12 +246,12 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
                   // Filter dropdown
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _selectedFilter,
-                      decoration: InputDecoration(
+                      initialValue: _selectedFilter,
+                      decoration: const InputDecoration(
                         labelText: 'Filter',
                         filled: true,
                         fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(
+                        contentPadding: EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 8,
                         ),
@@ -272,12 +274,12 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
                   // Sort dropdown
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _selectedSort,
-                      decoration: InputDecoration(
+                      initialValue: _selectedSort,
+                      decoration: const InputDecoration(
                         labelText: 'Sort',
                         filled: true,
                         fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(
+                        contentPadding: EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 8,
                         ),
@@ -389,7 +391,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
     final overdueCount = _tasks.where((task) => 
         !task.isCompleted && 
         task.hasDueDate && 
-        task.dueDate.isBefore(DateTime.now())).length;
+        task.dueDate != null && task.dueDate!.isBefore(DateTime.now())).length;
     
     return Container(
       padding: const EdgeInsets.all(16),
@@ -645,7 +647,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
         
         await _taskService.deleteTask(
           userId: widget.userId,
-          taskId: task.id as String,
+          taskId: task.id,
         );
         await _loadTasks();
         _showSuccessSnackBar('Task deleted successfully');
@@ -664,7 +666,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CreateTask(availableProjects: []),
+        builder: (context) => const CreateTask(availableProjects: []),
       ),
     );
 
@@ -691,16 +693,53 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
     );
   }
 
-  /// Toggles task selection mode
-  /// Enters or exits selection mode
-  void _toggleSelectionMode() {
-    setState(() {
-      _isSelectionMode = !_isSelectionMode;
-      if (!_isSelectionMode) {
-        _selectedTasks.clear();
+  /// Deletes a single task
+  /// Shows confirmation and removes task from list
+  Future<void> _deleteTask(TaskModel.Task task) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Task'),
+        content: Text('Are you sure you want to delete "${task.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        setState(() {
+          _isLoading = true;
+          _errorMessage = '';
+        });
+        
+        // Delete task from service
+        await _taskService.deleteTask(
+          userId: widget.userId,
+          taskId: task.id,
+        );
+        
+        // Reload tasks
+        await _loadTasks();
+        
+        _showSuccessSnackBar('Task deleted successfully');
+      } catch (e) {
+        setState(() {
+          _errorMessage = 'Error deleting task: $e';
+          _isLoading = false;
+        });
       }
-    });
+    }
   }
+
 
   /// Toggles individual task selection
   /// Adds or removes task from selection
@@ -833,7 +872,7 @@ class TaskListView extends StatelessWidget {
   final void Function(TaskModel.Task)? onUpdateTask;
   final void Function(TaskModel.Task)? onDeleteTask;
 
-  TaskListView({
+  const TaskListView({super.key, 
     required this.tasks,
     required this.onTaskTap,
     required this.onUpdateTask,
@@ -887,7 +926,7 @@ class TaskListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final isOverdue = !task.isCompleted && 
                      task.hasDueDate && 
-                     task.dueDate.isBefore(DateTime.now());
+                     task.dueDate != null && task.dueDate!.isBefore(DateTime.now());
     
     return Card(
       elevation: 3,
@@ -979,18 +1018,18 @@ class TaskListItem extends StatelessWidget {
                             ),
                             const SizedBox(width: 8),
                             // Priority badge
-                            if (task.priority.isNotEmpty)
+                            if (task.priority.name.isNotEmpty)
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 6,
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: _getPriorityColor(task.priority),
+                                  color: _getPriorityColor(task.priority.name),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  task.priority,
+                                  task.priority.name,
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 10,
@@ -1063,7 +1102,7 @@ class TaskListItem extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          'Due: ${_formatDate(task.dueDate)}',
+                          'Due: ${task.dueDate != null ? _formatDate(task.dueDate!) : 'No due date'}',
                           style: TextStyle(
                             fontSize: 12,
                             color: isOverdue ? Colors.red : Colors.grey[600],
@@ -1105,7 +1144,7 @@ class TaskListItem extends StatelessWidget {
   void _showTaskOptionsDialog(BuildContext context) {
     showMenu(
       context: context,
-      position: RelativeRect.fromLTRB(0, 0, 0, 0),
+      position: const RelativeRect.fromLTRB(0, 0, 0, 0),
       items: [
         if (onUpdateTask != null)
           PopupMenuItem(

@@ -51,21 +51,21 @@ class NotificationItem {
         isRead: false,
         relatedTask: task,
       );
-    } else if (task.hasDueDate && task.dueDate.isBefore(now)) {
+    } else if (task.dueDate != null && task.dueDate!.isBefore(now)) {
       return NotificationItem(
         id: 'overdue_${task.id}',
         title: 'Task Overdue',
-        message: '"${task.title}" is overdue by ${now.difference(task.dueDate).inDays} days',
+        message: '"${task.title}" is overdue by ${now.difference(task.dueDate!).inDays} days',
         type: NotificationType.taskOverdue,
         timestamp: now,
         isRead: false,
         relatedTask: task,
       );
-    } else if (task.hasDueDate && task.dueDate.difference(now).inDays <= 1) {
+    } else if (task.dueDate != null && task.dueDate!.difference(now).inDays <= 1) {
       return NotificationItem(
         id: 'due_${task.id}',
         title: 'Task Due Soon',
-        message: '"${task.title}" is due ${DateFormat.jm().format(task.dueDate)} today',
+        message: '"${task.title}" is due ${DateFormat.jm().format(task.dueDate!)} today',
         type: NotificationType.taskDue,
         timestamp: now,
         isRead: false,
@@ -86,6 +86,8 @@ class NotificationItem {
 }
 
 class NotificationScreen extends StatefulWidget {
+  const NotificationScreen({super.key});
+
   @override
   _NotificationScreenState createState() => _NotificationScreenState();
 }
@@ -100,6 +102,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   NotificationType? _selectedFilter;
   bool _showUnreadOnly = false;
   
+  @override
   void initState() {
     super.initState();
     _loadNotifications();
@@ -148,8 +151,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: _clearAllNotifications,
         backgroundColor: Theme.of(context).primaryColor,
-        child: const Icon(Icons.clear_all, color: Colors.white),
         tooltip: 'Clear All Notifications',
+        child: const Icon(Icons.clear_all, color: Colors.white),
       ),
     );
   }
@@ -414,7 +417,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
+          const Icon(
             Icons.notifications_none,
             size: 64,
             color: Colors.white70,
@@ -432,7 +435,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
             _showUnreadOnly 
                 ? 'No unread notifications to display'
                 : 'You\'re all caught up!',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
               color: Colors.white70,
             ),
@@ -469,7 +472,18 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   void _markAsRead(NotificationItem notification) {
     setState(() {
-      notification.isRead = true;
+      final index = _notifications.indexWhere((n) => n.id == notification.id);
+      if (index != -1) {
+        _notifications[index] = NotificationItem(
+          id: notification.id,
+          title: notification.title,
+          message: notification.message,
+          type: notification.type,
+          timestamp: notification.timestamp,
+          isRead: true,
+          relatedTask: notification.relatedTask,
+        );
+      }
     });
   }
 
@@ -498,9 +512,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return Colors.purple;
       case NotificationType.taskUpdated:
         return Colors.orange;
-      default:
-        return Colors.grey;
-    }
+      }
   }
 
   IconData _getNotificationIcon(NotificationType type) {
@@ -515,9 +527,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return Icons.person;
       case NotificationType.taskUpdated:
         return Icons.update;
-      default:
-        return Icons.notifications;
-    }
+      }
   }
 
   String _formatTimestamp(DateTime timestamp) {

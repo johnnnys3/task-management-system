@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:task_management/models/project.dart';
 import 'package:task_management/models/task.dart';
+import 'package:task_management/models/task_list_notifier.dart';
 import 'dart:async';
 
 import 'package:task_management/data/database_helper(task).dart';
@@ -126,6 +127,7 @@ class TaskProvider extends ChangeNotifier {
     double? estimatedHours,
     double? actualHours,
     List<String>? tags,
+    DateTime? completedAt,
   }) async {
     if (_task == null) {
       _setError('No task loaded to update');
@@ -148,6 +150,7 @@ class TaskProvider extends ChangeNotifier {
         estimatedHours: estimatedHours,
         actualHours: actualHours,
         tags: tags,
+        completedAt: completedAt,
         updatedAt: DateTime.now(),
       );
 

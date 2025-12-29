@@ -2,7 +2,6 @@
 /// Provides rich project editing interface with modern UI and validation
 /// Includes form validation, error handling, and user feedback
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:task_management/data/database_helper(project).dart';
 import 'package:task_management/models/project.dart';
@@ -311,7 +310,7 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
         return Text(
           '$currentLength/$maxLength',
           style: TextStyle(
-            color: currentLength > maxLength * 0.8 ? Colors.red : Colors.grey,
+            color: currentLength > (maxLength ?? 100) * 0.8 ? Colors.red : Colors.grey,
           ),
         );
       },
@@ -353,7 +352,7 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
         return Text(
           '$currentLength/$maxLength',
           style: TextStyle(
-            color: currentLength > maxLength * 0.8 ? Colors.red : Colors.grey,
+            color: currentLength > (maxLength ?? 100) * 0.8 ? Colors.red : Colors.grey,
           ),
         );
       },
@@ -461,7 +460,7 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
                 _isCompleted = value;
               });
             },
-            activeColor: Theme.of(context).primaryColor,
+            activeThumbColor: Theme.of(context).primaryColor,
           ),
         ],
       ),
@@ -471,16 +470,16 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
   /// Builds project statistics
   /// Shows project information cards
   Widget _buildProjectStatistics() {
-    final taskCount = widget.project.tasks?.length ?? 0;
+    final taskCount = widget.project.tasks.length;
     final isOverdue = !widget.project.isCompleted && 
                      widget.project.dueDate.isBefore(DateTime.now());
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Project Information',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),

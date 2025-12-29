@@ -1,6 +1,7 @@
 /// Main application entry point for the Task Management System
 /// Provides comprehensive app initialization, theming, and authentication handling
 /// Includes advanced logging, error handling, and responsive design features
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
@@ -118,7 +119,7 @@ class TaskManagementApp extends StatelessWidget {
           return MediaQuery(
             // Ensure minimum text scale for accessibility
             data: MediaQuery.of(context).copyWith(
-              textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(0.8, 2.0),
+              textScaler: TextScaler.linear(MediaQuery.of(context).textScaleFactor.clamp(0.8, 2.0)),
             ),
             child: child!,
           );
@@ -161,7 +162,7 @@ class TaskManagementApp extends StatelessWidget {
       ),
       
       // Card theming
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 2,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -235,7 +236,7 @@ class TaskManagementApp extends StatelessWidget {
         scrolledUnderElevation: 2,
       ),
       
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 4,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -346,7 +347,7 @@ class _AuthenticationWrapperState extends State<AuthenticationWrapper> {
         // Handle authenticated user
         if (user != null) {
           try {
-            final isAdmin = _authService.isAdmin ?? false;
+            final isAdmin = _authService.isAdmin;
             _logger.info('User authenticated: ${user.uid}, Admin: $isAdmin');
             
             return HomeScreen(
@@ -356,7 +357,7 @@ class _AuthenticationWrapperState extends State<AuthenticationWrapper> {
             );
           } catch (e) {
             _logger.severe('Error creating home screen', e);
-            return ErrorScreen(
+            return const ErrorScreen(
               title: 'Application Error',
               message: 'Failed to load home screen. Please restart the app.',
             );

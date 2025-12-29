@@ -120,12 +120,12 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
               const SizedBox(height: 8),
               // Filter dropdown
               DropdownButtonFormField<String>(
-                value: _selectedFilter,
-                decoration: InputDecoration(
+                initialValue: _selectedFilter,
+                decoration: const InputDecoration(
                   labelText: 'Filter',
                   filled: true,
                   fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(
+                  contentPadding: EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 8,
                   ),
@@ -229,9 +229,9 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
   /// Builds team statistics
   /// Shows count of teams by status
   Widget _buildTeamStatistics() {
-    final activeCount = _teams.where((team) => team.isActive).length;
-    final inactiveCount = _teams.where((team) => !team.isActive).length;
-    final myTeamsCount = _teams.where((team) => team.members.contains(widget.userId)).length;
+    final activeCount = _teams.where((team) => team.status == TeamStatus.active).length;
+    final inactiveCount = _teams.where((team) => team.status == TeamStatus.inactive).length;
+    final myTeamsCount = _teams.where((team) => team.members.containsKey(widget.userId)).length;
     
     return Container(
       padding: const EdgeInsets.all(16),
@@ -303,7 +303,7 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
       // Fetch teams from Firestore
       final QuerySnapshot snapshot = await _teamsCollection.get();
       final List<Team> loadedTeams = snapshot.docs
-          .map((doc) => Team.fromFirestore(doc.id, doc.data() as Map<String, dynamic>))
+          .map((doc) => Team.fromMap(doc.data() as Map<String, dynamic>, doc.id))
           .toList();
 
       setState(() {
@@ -350,11 +350,11 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
   bool _matchesFilter(Team team) {
     switch (_selectedFilter) {
       case 'Active':
-        return team.isActive;
+        return team.status == TeamStatus.active;
       case 'Inactive':
-        return !team.isActive;
+        return team.status == TeamStatus.inactive;
       case 'My Teams':
-        return team.members.contains(widget.userId);
+        return team.members.containsKey(widget.userId);
       default:
         return true; // 'All' filter
     }
@@ -453,6 +453,58 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
       ),
     );
   }
+
+  /// Builds team list
+  /// Displays teams in a scrollable list
+  Widget _buildTeamList() {
+    return ListView.builder(
+      itemCount: _filteredTeams.length,
+      itemBuilder: (context, index) {
+        final team = _filteredTeams[index];
+        return TeamListItem(
+          team: team,
+          onTap: () => _navigateToTeamDetails(team),
+          onUpdateTeam: widget.isAdmin ? () => _navigateToUpdateTeam(team) : null,
+          onDeleteTeam: widget.isAdmin ? () => _deleteTeam(team) : null,
+        );
+      },
+    );
+  }
+
+  /// Builds individual statistic card
+  /// Creates styled card for team count
+  Widget _buildStatCard(String label, String count, Color color) {
+    return Expanded(
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            children: [
+              Text(
+                count,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Modern team list item with rich information display
@@ -516,11 +568,11 @@ class TeamListItem extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: team.isActive ? Colors.green : Colors.grey,
+                      color: team.status == TeamStatus.active ? Colors.green : Colors.grey,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      team.isActive ? 'Active' : 'Inactive',
+                      team.status == TeamStatus.active ? 'Active' : 'Inactive',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10,
@@ -577,9 +629,9 @@ class TeamListItem extends StatelessWidget {
                         color: Colors.purple,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Text(
+                      child: const Text(
                         'Member',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.white,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -638,4 +690,5 @@ class TeamListItem extends StatelessWidget {
         break;
     }
   }
+
 }

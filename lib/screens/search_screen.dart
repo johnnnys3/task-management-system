@@ -8,6 +8,8 @@ import 'package:task_management/data/database_helper(task).dart';
 import 'task_details_screen.dart';
 
 class SearchScreen extends StatefulWidget {
+  const SearchScreen({super.key});
+
   @override
   _SearchScreenState createState() => _SearchScreenState();
 }
@@ -76,6 +78,7 @@ class _SearchScreenState extends State<SearchScreen> {
   /// Restores previous search queries
   Future<void> _loadSearchHistory() async {
     // TODO: Implement search history loading from SharedPreferences
+    if (!mounted) return;
     setState(() {
       _searchHistory = ['Recent search 1', 'Recent search 2'];
     });
@@ -86,6 +89,7 @@ class _SearchScreenState extends State<SearchScreen> {
   void _onSearchChanged() {
     final query = _searchController.text.trim();
     
+    if (!mounted) return;
     setState(() {
       _isSearching = query.isNotEmpty;
     });
@@ -99,6 +103,7 @@ class _SearchScreenState extends State<SearchScreen> {
     
     // Debounce search to avoid excessive calls
     Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
       if (_searchController.text.trim() == query) {
         _performSearch(query);
       }
@@ -109,6 +114,7 @@ class _SearchScreenState extends State<SearchScreen> {
   /// Updates search results based on query and filters
   Future<void> _performSearch(String query) async {
     try {
+      if (!mounted) return;
       setState(() {
         _isLoading = true;
         _errorMessage = '';
@@ -129,16 +135,20 @@ class _SearchScreenState extends State<SearchScreen> {
         }
         
         // Search in project
-        if (_searchInProject && task.projectId.isNotEmpty) {
+        if (_searchInProject && task.associatedProject?.id != null) {
           // TODO: Add project name search when project data is available
+        }
+        
+        // Apply due date filter
+        if (_selectedFilter == 'Overdue') {
+          matches = matches && task.dueDate != null && task.dueDate!.isBefore(DateTime.now());
         }
         
         // Apply status filter
         if (_selectedFilter != 'All') {
           matches = matches && (
             (_selectedFilter == 'Completed' && task.isCompleted) ||
-            (_selectedFilter == 'Pending' && !task.isCompleted) ||
-            (_selectedFilter == 'Overdue' && !task.isCompleted && task.hasDueDate && task.dueDate.isBefore(DateTime.now()))
+            (_selectedFilter == 'Pending' && !task.isCompleted)
           );
         }
         
@@ -163,12 +173,11 @@ class _SearchScreenState extends State<SearchScreen> {
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Search failed: ${e.toString()}';
-          _isLoading = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Search failed: ${e.toString()}';
+        _isLoading = false;
+      });
     }
   }
 
@@ -240,20 +249,20 @@ class _SearchScreenState extends State<SearchScreen> {
   /// Builds loading widget
   /// Shows centered loading indicator
   Widget _buildLoadingWidget() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(
+          const CircularProgressIndicator(
             strokeWidth: 3,
             valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
             'Loading tasks...',
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey[600],
+              color: Color(0xFF757575),
             ),
           ),
         ],
@@ -418,8 +427,6 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  }
-
   /// Builds search results list
   /// Displays filtered tasks with modern cards
   Widget _buildSearchResults() {
@@ -483,7 +490,7 @@ class _SearchScreenState extends State<SearchScreen> {
   /// Builds individual task card
   /// Creates styled card for search result
   Widget _buildTaskCard(Task task) {
-    final isOverdue = !task.isCompleted && task.hasDueDate && task.dueDate.isBefore(DateTime.now());
+    final isOverdue = !task.isCompleted && task.dueDate != null && task.dueDate!.isBefore(DateTime.now());
     
     return Card(
       elevation: 2,
@@ -563,14 +570,14 @@ class _SearchScreenState extends State<SearchScreen> {
                   const SizedBox(width: 4),
                   Text(
                     task.hasDueDate 
-                        ? 'Due: ${DateFormat('MMM dd, yyyy').format(task.dueDate)}'
+                        ? 'Due: ${DateFormat('MMM dd, yyyy').format(task.dueDate!)}'
                         : 'No due date',
                     style: TextStyle(
                       fontSize: 12,
                       color: isOverdue ? Colors.red : Colors.grey[600],
                     ),
                   ),
-                  if (task.projectId.isNotEmpty) ...[
+                  if (task.associatedProject?.id != null && task.associatedProject!.id.isNotEmpty) ...[
                     const SizedBox(width: 16),
                     Icon(
                       Icons.folder,
@@ -579,7 +586,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      'Project: ${task.projectId}',
+                      'Project: ${task.associatedProject!.id}',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
@@ -704,8 +711,6 @@ class _SearchScreenState extends State<SearchScreen> {
         ],
       ),
     );
-  }
-
   }
 
   /// Handles menu actions from app bar
@@ -864,3 +869,5 @@ class _SearchScreenState extends State<SearchScreen> {
       ),
     );
   }
+
+}

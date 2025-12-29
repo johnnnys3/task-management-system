@@ -71,7 +71,7 @@ class ProjectDatabase {
   /// Throws [ProjectNotFoundException] if project doesn't exist
   /// Throws [ProjectValidationException] if project data is invalid
   Future<void> updateProject(Project project) async {
-    if (project.id == null || project.id!.isEmpty) {
+    if (project.id.isEmpty) {
       throw ProjectValidationException('Project ID is required for update');
     }
 
@@ -87,7 +87,7 @@ class ProjectDatabase {
     } on FirebaseException catch (e) {
       if (e.code == 'not-found') {
         _logger.warning('Project not found for update: ${project.id}');
-        throw ProjectNotFoundException(project.id!);
+        throw ProjectNotFoundException(project.id);
       }
       _logger.severe('Firebase error updating project', e);
       throw ProjectDatabaseException(
@@ -152,7 +152,7 @@ class ProjectDatabase {
       final data = docSnapshot.data()!;
       data['id'] = docSnapshot.id;
       
-      return Project.fromMap(data);
+      return Project.fromMap(data, docSnapshot.id);
     } on FirebaseException catch (e) {
       _logger.severe('Firebase error fetching project', e);
       throw ProjectDatabaseException(
@@ -176,7 +176,7 @@ class ProjectDatabase {
       return querySnapshot.docs.map((doc) {
         final data = doc.data();
         data['id'] = doc.id;
-        return Project.fromMap(data);
+        return Project.fromMap(data, doc.id);
       }).toList();
     } on FirebaseException catch (e) {
       _logger.severe('Firebase error fetching all projects', e);
@@ -209,7 +209,7 @@ class ProjectDatabase {
       return querySnapshot.docs.map((doc) {
         final data = doc.data();
         data['id'] = doc.id;
-        return Project.fromMap(data);
+        return Project.fromMap(data, doc.id);
       }).toList();
     } on FirebaseException catch (e) {
       _logger.severe('Firebase error fetching user projects', e);
@@ -236,13 +236,13 @@ class ProjectDatabase {
     try {
       final querySnapshot = await _collection
           .where('name', isGreaterThanOrEqualTo: query)
-          .where('name', isLessThanOrEqualTo: query + '\uf8ff')
+          .where('name', isLessThanOrEqualTo: '$query\uf8ff')
           .get();
       
       return querySnapshot.docs.map((doc) {
         final data = doc.data();
         data['id'] = doc.id;
-        return Project.fromMap(data);
+        return Project.fromMap(data, doc.id);
       }).toList();
     } on FirebaseException catch (e) {
       _logger.severe('Firebase error searching projects', e);
@@ -269,7 +269,7 @@ class ProjectDatabase {
     final batch = _firestore.batch();
     try {
       for (final project in projects) {
-        if (project.id == null || project.id!.isEmpty) {
+        if (project.id.isEmpty) {
           throw ProjectValidationException('All projects must have IDs for batch update');
         }
         
@@ -308,7 +308,7 @@ class ProjectDatabase {
     if (project.name.length > 100) {
       throw ProjectValidationException('Project name must be less than 100 characters');
     }
-    if (project.description != null && project.description!.length > 500) {
+    if (project.description.length > 500) {
       throw ProjectValidationException('Project description must be less than 500 characters');
     }
   }
@@ -321,7 +321,7 @@ class ProjectDatabase {
         .map((snapshot) => snapshot.docs.map((doc) {
           final data = doc.data();
           data['id'] = doc.id;
-          return Project.fromMap(data);
+          return Project.fromMap(data, doc.id);
         }).toList());
   }
 
@@ -338,7 +338,7 @@ class ProjectDatabase {
         .map((snapshot) => snapshot.docs.map((doc) {
           final data = doc.data();
           data['id'] = doc.id;
-          return Project.fromMap(data);
+          return Project.fromMap(data, doc.id);
         }).toList());
   }
 }

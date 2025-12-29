@@ -10,7 +10,7 @@ class TaskService {
       List<Task> tasks = [];
 
       for (QueryDocumentSnapshot<Object?> doc in tasksSnapshot.docs) {
-        Task task = Task.fromDocumentSnapshot(doc);
+        Task task = Task.fromMap(doc.data() as Map<String, dynamic>, doc.id);
         tasks.add(task);
       }
 
@@ -41,7 +41,7 @@ class TaskService {
         'userId': userId,
         'title': task.title,
         'description': task.description,
-        'dueDate': task.dueDate.toIso8601String(),
+        'dueDate': task.dueDate?.toIso8601String(),
         'attachments': task.attachments,
         'isCompleted': task.isCompleted ? 1 : 0,
         'associatedProject': task.associatedProject?.toMap(),

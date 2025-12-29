@@ -4,9 +4,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:task_management/authentication/authentication_service.dart';
-import 'package:task_management/screens/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }
@@ -21,7 +22,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _rememberMe = false;
 
   @override
   void dispose() {
@@ -293,3 +293,98 @@ class _LoginScreenState extends State<LoginScreen> {
       ],
     );
   }
+
+  /// Builds role selection dropdown
+  Widget _buildRoleSelection(AuthenticationService authService) {
+    return DropdownButtonFormField<String>(
+      decoration: InputDecoration(
+        labelText: 'Role',
+        border: OutlineInputBorder(),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.1),
+      ),
+      value: authService.selectedRole.isEmpty ? null : authService.selectedRole,
+      items: ['admin', 'regular'].map((role) {
+        return DropdownMenuItem(
+          value: role,
+          child: Text(role[0].toUpperCase() + role.substring(1)),
+        );
+      }).toList(),
+      onChanged: (value) {
+        if (value != null) {
+          authService.selectedRole = value;
+        }
+      },
+    );
+  }
+
+  /// Builds login button
+  Widget _buildLoginButton(AuthenticationService authService) {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : () => _handleLogin(authService),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.blue.shade600,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+          ),
+        ),
+        child: _isLoading
+            ? CircularProgressIndicator(color: Colors.white)
+            : Text('Login', style: TextStyle(fontSize: 16)),
+      ),
+    );
+  }
+
+  /// Builds registration link
+  Widget _buildRegistrationLink() {
+    return TextButton(
+      onPressed: () {
+        // Navigate to registration screen
+      },
+      child: Text(
+        'Don\'t have an account? Register',
+        style: TextStyle(color: Colors.blue.shade200),
+      ),
+    );
+  }
+
+  /// Handles login process
+  Future<void> _handleLogin(AuthenticationService authService) async {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        await authService.signIn(
+          nameController.text.trim(),
+          emailController.text.trim(),
+          passwordController.text,
+        );
+        
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Login failed: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    }
+  }
+}

@@ -4,6 +4,8 @@ import 'package:task_management/data/database_helper(project).dart';
 import 'package:task_management/models/project.dart';
 
 class CreateProjectScreen extends StatefulWidget {
+  const CreateProjectScreen({super.key});
+
   @override
   _CreateProjectScreenState createState() => _CreateProjectScreenState();
 }

@@ -7,12 +7,13 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:task_management/models/task.dart';
 import 'package:task_management/data/database_helper(task).dart';
+import 'package:task_management/screens/task_details_screen.dart';
 
 class ProjectDetailsScreen extends StatefulWidget {
   /// Project to display details for
   final Project project;
 
-  const ProjectDetailsScreen({required this.project});
+  const ProjectDetailsScreen({super.key, required this.project});
 
   @override
   _ProjectDetailsScreenState createState() => _ProjectDetailsScreenState();
@@ -82,6 +83,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
               name: data['name'] ?? project.name,
               description: projectDescription,
               dueDate: (data['dueDate'] as Timestamp?)?.toDate() ?? project.dueDate,
+              tasks: project.tasks,
               isCompleted: data['isCompleted'] ?? project.isCompleted,
               createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? project.createdAt,
             );
@@ -105,11 +107,11 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   Future<void> _fetchRelatedTasks() async {
     try {
       // Fetch tasks from local database
-      final tasks = await TaskDatabase.getTasks();
+      final fetchedTasks = await TaskDatabase().fetchTasks();
       
       // Filter tasks related to this project
-      final projectTasks = tasks.where((task) => 
-        task.projectId == project.id
+      final projectTasks = fetchedTasks.where((task) => 
+        task.associatedProject?.id == project.id
       ).toList();
       
       if (mounted) {
@@ -207,7 +209,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   /// Builds loading widget with modern styling
   /// Shows centered loading indicator with message
   Widget _buildLoadingWidget() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -220,7 +222,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
             'Loading project details...',
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey[600],
+              color: Colors.grey.shade600,
             ),
           ),
         ],
@@ -252,13 +254,11 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
             _buildRelatedTasksCard(),
             const SizedBox(height: 16),
             // Project statistics
-            _buildStatisticsCard(),
+            _buildStatisticsCard(context),
           ],
         ),
       ),
     );
-  }
-
   }
 
   /// Builds project information card
@@ -288,7 +288,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
               Row(
                 children: [
                   Icon(
-                    Icons.project,
+                    Icons.work,
                     color: Theme.of(context).primaryColor,
                     size: 24,
                   ),
@@ -471,14 +471,14 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                         task.title,
                         style: const TextStyle(fontSize: 16),
                       ),
-                      subtitle: task.hasDueDate
+                      subtitle: task.dueDate != null
                           ? Text(
-                              'Due: ${_formatDate(task.dueDate)}',
+                              'Due: ${_formatDate(task.dueDate!)}',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: task.dueDate.isBefore(DateTime.now()) 
+                                color: task.dueDate!.isBefore(DateTime.now()) 
                                     ? Colors.red 
-                                    : Colors.grey[600],
+                                    : Colors.grey.shade600,
                               ),
                             )
                           : null,
@@ -515,7 +515,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
 
   /// Builds project statistics card
   /// Shows project metrics and progress
-  Widget _buildStatisticsCard() {
+  Widget _buildStatisticsCard(BuildContext context) {
     final completedTasks = relatedTasks.where((task) => task.isCompleted).length;
     final totalTasks = relatedTasks.length;
     final progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0.0;
@@ -714,7 +714,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     
     if (picked != null) {
       setState(() {
-        _dueDateController.text = DateFormat('yyyy-MM-dd').format(picked!);
+        _dueDateController.text = DateFormat('yyyy-MM-dd').format(picked);
       });
     }
   }
@@ -753,6 +753,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           name: _nameController.text.trim(),
           description: _descriptionController.text.trim(),
           dueDate: DateFormat('yyyy-MM-dd').parse(_dueDateController.text),
+          tasks: project.tasks,
           isCompleted: project.isCompleted,
           createdAt: project.createdAt,
         );
@@ -907,5 +908,32 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   /// Returns formatted date string
   String _formatDate(DateTime date) {
     return DateFormat('yyyy-MM-dd').format(date);
+  }
+
+  /// Builds floating action buttons
+  /// Provides edit and delete functionality
+  Widget _buildFloatingActions() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FloatingActionButton(
+          heroTag: "edit",
+          onPressed: () {
+            setState(() {
+              _isEditing = true;
+            });
+          },
+          backgroundColor: Colors.blue,
+          child: const Icon(Icons.edit, color: Colors.white),
+        ),
+        const SizedBox(height: 8),
+        FloatingActionButton(
+          heroTag: "delete",
+          onPressed: () => _showDeleteConfirmation(),
+          backgroundColor: Colors.red,
+          child: const Icon(Icons.delete, color: Colors.white),
+        ),
+      ],
+    );
   }
 }
