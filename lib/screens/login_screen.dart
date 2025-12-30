@@ -380,7 +380,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             ),
           ),
           child: DropdownButtonFormField<String>(
-            value: _selectedRole,
+            initialValue: _selectedRole,
             decoration: InputDecoration(
               hintText: 'Select your role',
               hintStyle: TextStyle(

@@ -3,6 +3,7 @@
 /// Includes filtering, sorting, search, and batch operations
 library;
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:task_management/authentication/user.dart';
 import 'package:task_management/models/task.dart' as TaskModel;
 import 'package:task_management/screens/task_details_screen.dart';
@@ -186,6 +187,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
     super.build(context);
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FF),
       // Modern app bar with search and filters
       appBar: _buildAppBar(),
       // Main content with loading overlay
@@ -215,6 +217,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
       ),
       backgroundColor: Theme.of(context).primaryColor,
       elevation: 0,
+      automaticallyImplyLeading: false,
       // Search bar in app bar
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(80),
@@ -293,7 +296,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
                         ],
                       ),
                       child: DropdownButtonFormField<String>(
-                        value: _selectedFilter,
+                        initialValue: _selectedFilter,
                         decoration: InputDecoration(
                           labelText: 'Filter',
                           labelStyle: TextStyle(
@@ -348,7 +351,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
                         ],
                       ),
                       child: DropdownButtonFormField<String>(
-                        value: _selectedSort,
+                        initialValue: _selectedSort,
                         decoration: InputDecoration(
                           labelText: 'Sort',
                           labelStyle: TextStyle(
@@ -476,65 +479,179 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
   /// Shows count of tasks by status
   Widget _buildTaskStatistics() {
     final completedCount = _tasks.where((task) => task.isCompleted).length;
+    final inProgressCount = _tasks.where((task) => !task.isCompleted && task.status.value == 'in_progress').length;
     final pendingCount = _tasks.where((task) => !task.isCompleted).length;
-    final overdueCount = _tasks.where((task) => 
-        !task.isCompleted && 
-        task.hasDueDate && 
-        task.dueDate != null && task.dueDate!.isBefore(DateTime.now())).length;
     
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       child: Row(
         children: [
-          // Total tasks
-          _buildStatCard('Total', _tasks.length.toString(), Colors.blue),
-          const SizedBox(width: 8),
-          // Completed tasks
-          _buildStatCard('Completed', completedCount.toString(), Colors.green),
-          const SizedBox(width: 8),
-          // Pending tasks
-          _buildStatCard('Pending', pendingCount.toString(), Colors.orange),
-          const SizedBox(width: 8),
-          // Overdue tasks
-          _buildStatCard('Overdue', overdueCount.toString(), Colors.red),
+          // Completed Card (Purple)
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.check_circle_outline,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '$completedCount',
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Completed',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // In Progress Card (White)
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.access_time,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '$inProgressCount',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'In Progress',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Pending Card (White)
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.pending_outlined,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '$pendingCount',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Pending',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  /// Builds individual statistic card
-  /// Creates styled card for task count
-  Widget _buildStatCard(String label, String count, Color color) {
-    return Expanded(
-      child: Card(
-        elevation: 2,
-        color: color.withOpacity(0.1),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Column(
-            children: [
-              Text(
-                count,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   /// Builds empty state widget
   /// Shows message when no tasks match filters
@@ -1017,213 +1134,108 @@ class TaskListItem extends StatelessWidget {
                      task.hasDueDate && 
                      task.dueDate != null && task.dueDate!.isBefore(DateTime.now());
     
-    return Card(
-      elevation: 3,
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      shape: RoundedRectangleBorder(
+    final timeStr = task.dueDate != null 
+        ? DateFormat.jm().format(task.dueDate!)
+        : 'No time';
+    
+    String statusLabel = 'PENDING';
+    Color statusColor = Colors.blue;
+    
+    if (task.isCompleted) {
+      statusLabel = 'DONE';
+      statusColor = Colors.green;
+    } else if (task.priority.value == 'urgent') {
+      statusLabel = 'URGENT';
+      statusColor = Colors.red;
+    } else if (task.status.value == 'in_progress') {
+      statusLabel = 'CALL';
+      statusColor = Colors.blue;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12, left: 20, right: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        side: isSelected 
-            ? BorderSide(color: Theme.of(context).primaryColor, width: 2)
-            : BorderSide.none,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: InkWell(
-        onTap: onTaskTap,
-        onLongPress: () {
-          if (onSelectionToggle != null) {
-            onSelectionToggle!(task.id);
-          } else if (onUpdateTask != null || onDeleteTask != null) {
-            _showTaskOptionsDialog(context);
-          }
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with title, status, and selection
-              Row(
-                children: [
-                  // Selection checkbox
-                  if (onSelectionToggle != null)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 12),
-                      child: Checkbox(
-                        value: isSelected,
-                        onChanged: (value) {
-                          onSelectionToggle!(task.id);
-                        },
-                        activeColor: Theme.of(context).primaryColor,
+      child: Row(
+        children: [
+          // Checkbox
+          task.isCompleted
+              ? Icon(
+                  Icons.check_circle,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 24,
+                )
+              : Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.grey[400]!, width: 2),
+                  ),
+                ),
+          const SizedBox(width: 16),
+          // Task Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  task.title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: task.isCompleted ? Colors.grey : Colors.black87,
+                    decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      size: 14,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      timeStr,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
                       ),
                     ),
-                  // Title and status
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          task.title,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            decoration: task.isCompleted 
-                                ? TextDecoration.lineThrough
-                                : TextDecoration.none,
-                            color: task.isCompleted ? Colors.grey : Colors.black87,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        // Status and priority row
-                        Row(
-                          children: [
-                            // Status badge
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: task.isCompleted 
-                                    ? Colors.green 
-                                    : isOverdue 
-                                        ? Colors.red 
-                                        : Colors.orange,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                task.isCompleted 
-                                    ? 'Completed' 
-                                    : isOverdue 
-                                        ? 'Overdue' 
-                                        : 'Pending',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            // Priority badge
-                            if (task.priority.name.isNotEmpty)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: _getPriorityColor(task.priority.name),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  task.priority.name,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  // More options button
-                  if (onUpdateTask != null || onDeleteTask != null)
-                    PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert),
-                      onSelected: (value) => _handleMenuAction(value, context),
-                      itemBuilder: (context) => [
-                        if (onUpdateTask != null)
-                          const PopupMenuItem(
-                            value: 'update',
-                            child: Row(
-                              children: [
-                                Icon(Icons.edit, size: 18),
-                                SizedBox(width: 8),
-                                Text('Update'),
-                              ],
-                            ),
-                          ),
-                        if (onDeleteTask != null)
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete, size: 18, color: Colors.red),
-                                SizedBox(width: 8),
-                                Text('Delete', style: TextStyle(color: Colors.red)),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Description
-              if (task.description.isNotEmpty)
-                Text(
-                  task.description,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                    height: 1.4,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  ],
                 ),
-              const SizedBox(height: 12),
-              // Footer with due date and assigned members
-              Row(
-                children: [
-                  // Due date
-                  if (task.hasDueDate)
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.calendar_today,
-                          size: 16,
-                          color: isOverdue ? Colors.red : Colors.grey[600],
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Due: ${task.dueDate != null ? _formatDate(task.dueDate!) : 'No due date'}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isOverdue ? Colors.red : Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  const Spacer(),
-                  // Assigned members count
-                  if (task.assignedMembers.isNotEmpty)
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.people,
-                          size: 16,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${task.assignedMembers.length} member${task.assignedMembers.length == 1 ? '' : 's'}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+          // Status Badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              statusLabel,
+              style: TextStyle(
+                color: statusColor,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

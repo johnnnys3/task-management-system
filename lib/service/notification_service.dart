@@ -166,7 +166,7 @@ class NotificationService {
       // Get users assigned to this item
       final assignmentsQuery = await _firestore
           .collection('assignments')
-          .where(itemType + 'Id', isEqualTo: itemId)
+          .where('${itemType}Id', isEqualTo: itemId)
           .get();
 
       for (final assignmentDoc in assignmentsQuery.docs) {
@@ -219,9 +219,7 @@ Task Management System
   /// Builds email body for project due notification
   String _buildProjectDueEmailBody(ProjectModel.Project project, String userName) {
     final dueDate = project.dueDate;
-    final formattedDate = dueDate != null 
-        ? '${dueDate.day}/${dueDate.month}/${dueDate.year}'
-        : 'No due date set';
+    final formattedDate = '${dueDate.day}/${dueDate.month}/${dueDate.year}';
     
     return '''
 Dear $userName,

@@ -84,7 +84,7 @@ class AuthenticationService extends ChangeNotifier {
         try {
           final userDoc = await _userCollection.doc(user.uid).get();
           if (userDoc.exists) {
-            final userData = userDoc.data() as Map<String, dynamic>?;
+            final userData = userDoc.data();
             userRole = userData?['role'] ?? 'regular';
             // Update SharedPreferences with the role from Firestore
             await prefs.setString('userRole', userRole);

@@ -31,7 +31,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AuthenticationService authService;
-  late TabController _tabController;
   late AnimationController _fabAnimationController;
   late Animation<double> _fabAnimation;
 
@@ -40,7 +39,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.initState();
     authService = Provider.of<AuthenticationService>(context, listen: false);
     
-    _tabController = TabController(length: 3, vsync: this);
     _fabAnimationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -59,7 +57,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
-    _tabController.dispose();
     _fabAnimationController.dispose();
     super.dispose();
   }
@@ -95,7 +92,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         _buildNotificationButton(),
         _buildUserMenuButton(),
       ],
-      bottom: _buildTabBar(),
     );
   }
 
@@ -213,40 +209,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  /// Builds modern tab bar with enhanced styling
-  PreferredSizeWidget _buildTabBar() {
-    return TabBar(
-      controller: _tabController,
-      indicator: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-      ),
-      labelColor: Theme.of(context).colorScheme.primary,
-      unselectedLabelColor: Colors.grey[600],
-      labelStyle: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-      ),
-      unselectedLabelStyle: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-      ),
-      tabs: const [
-        Tab(
-          icon: Icon(Icons.dashboard_outlined),
-          text: 'Dashboard',
-        ),
-        Tab(
-          icon: Icon(Icons.task_outlined),
-          text: 'Tasks',
-        ),
-        Tab(
-          icon: Icon(Icons.analytics_outlined),
-          text: 'Reports',
-        ),
-      ],
-    );
-  }
 
   /// Builds modern floating action button
   Widget _buildFloatingActionButton() {
@@ -274,7 +236,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         child: FloatingActionButton(
           onPressed: () {
             // Navigate to task creation based on current tab
-            switch (_tabController.index) {
+            switch (_currentIndex) {
               case 0: // Dashboard
                 _showQuickActionMenu();
                 break;
@@ -300,7 +262,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   /// Gets appropriate icon for FAB based on current tab
   IconData _getFabIcon() {
-    switch (_tabController.index) {
+    switch (_currentIndex) {
       case 0:
         return Icons.add;
       case 1:
@@ -491,16 +453,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
+  int _currentIndex = 0;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FF),
-      appBar: _buildAppBar(),
-      body: TabBarView(
-        controller: _tabController,
+      body: IndexedStack(
+        index: _currentIndex,
         children: [
           // Dashboard Tab
-          const TaskStatsPage(),
+          TaskStatsPage(user: widget.user),
           // Tasks Tab
           TaskListScreen(
             userId: widget.userId,
@@ -514,6 +477,62 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
       floatingActionButton: _buildFloatingActionButton(),
       floatingActionButtonLocation: FloatingActionButtonLocation.endDocked,
+      bottomNavigationBar: _buildBottomNavigationBar(),
+    );
+  }
+
+  Widget _buildBottomNavigationBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: Theme.of(context).colorScheme.primary,
+        unselectedItemColor: Colors.grey,
+        selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w500,
+          fontSize: 12,
+        ),
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(
+              _currentIndex == 0 ? Icons.dashboard : Icons.dashboard_outlined,
+            ),
+            label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(
+              _currentIndex == 1 ? Icons.task_alt : Icons.task_outlined,
+            ),
+            label: 'Tasks',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(
+              _currentIndex == 2 ? Icons.bar_chart : Icons.bar_chart_outlined,
+            ),
+            label: 'Reports',
+          ),
+        ],
+      ),
     );
   }
 }

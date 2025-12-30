@@ -136,7 +136,7 @@ class TaskManagementApp extends StatelessWidget {
           return MediaQuery(
             // Ensure minimum text scale for accessibility
             data: MediaQuery.of(context).copyWith(
-              textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(0.8, 2.0),
+              textScaler: TextScaler.linear(MediaQuery.of(context).textScaleFactor.clamp(0.8, 2.0)),
             ),
             child: child!,
           );
