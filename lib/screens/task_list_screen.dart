@@ -223,20 +223,54 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
           child: Column(
             children: [
               // Search field
-              TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search tasks...',
-                  prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search tasks...',
+                    hintStyle: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 14,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Colors.grey.shade300,
+                        width: 1,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).primaryColor,
+                        width: 2,
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                 ),
               ),
@@ -246,57 +280,111 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
                 children: [
                   // Filter dropdown
                   Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _selectedFilter,
-                      decoration: const InputDecoration(
-                        labelText: 'Filter',
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 3,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
                       ),
-                      items: _filterOptions.map((filter) {
-                        return DropdownMenuItem(
-                          value: filter,
-                          child: Text(filter),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedFilter = value!;
-                        });
-                        _applyFiltersAndSort();
-                      },
+                      child: DropdownButtonFormField<String>(
+                        value: _selectedFilter,
+                        decoration: InputDecoration(
+                          labelText: 'Filter',
+                          labelStyle: TextStyle(
+                            color: Colors.grey.shade700,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          hintStyle: TextStyle(
+                            color: Colors.grey.shade500,
+                            fontSize: 14,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                        ),
+                        style: TextStyle(
+                          color: Colors.grey.shade800,
+                          fontSize: 14,
+                        ),
+                        items: _filterOptions.map((filter) {
+                          return DropdownMenuItem(
+                            value: filter,
+                            child: Text(filter),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedFilter = value!;
+                          });
+                          _applyFiltersAndSort();
+                        },
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   // Sort dropdown
                   Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _selectedSort,
-                      decoration: const InputDecoration(
-                        labelText: 'Sort',
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 3,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
                       ),
-                      items: _sortOptions.map((sort) {
-                        return DropdownMenuItem(
-                          value: sort,
-                          child: Text(sort),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedSort = value!;
-                        });
-                        _applyFiltersAndSort();
-                      },
+                      child: DropdownButtonFormField<String>(
+                        value: _selectedSort,
+                        decoration: InputDecoration(
+                          labelText: 'Sort',
+                          labelStyle: TextStyle(
+                            color: Colors.grey.shade700,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          hintStyle: TextStyle(
+                            color: Colors.grey.shade500,
+                            fontSize: 14,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                        ),
+                        style: TextStyle(
+                          color: Colors.grey.shade800,
+                          fontSize: 14,
+                        ),
+                        items: _sortOptions.map((sort) {
+                          return DropdownMenuItem(
+                            value: sort,
+                            child: Text(sort),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedSort = value!;
+                          });
+                          _applyFiltersAndSort();
+                        },
+                      ),
                     ),
                   ),
                 ],

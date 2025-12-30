@@ -8,6 +8,7 @@ import 'package:task_management/authentication/authentication_service.dart';
 import 'package:task_management/authentication/user.dart';
 import 'package:task_management/screens/calendar_integration_screen.dart';
 import 'package:task_management/screens/dashboard_screen.dart';
+import 'package:task_management/screens/login_screen.dart';
 import 'package:task_management/screens/notification_screen.dart';
 import 'package:task_management/screens/project_management_screen.dart';
 import 'package:task_management/screens/reporting_screen.dart';
@@ -52,15 +53,13 @@ class _HomeScreenState extends State<HomeScreen> {
       length: 2, // Two main tabs: Reports and Dashboard
       child: Scaffold(
         appBar: _buildAppBar(context), // Custom app bar with user info and actions
-        body: const TabBarView(
+        body: TabBarView(
           // Tab content: Reports and Dashboard
           children: [
-            ReportingScreen(), // Analytics and reports
-            TaskStatsPage(), // Task statistics and management
+            const ReportingScreen(), // Analytics and reports
+            const TaskStatsPage(), // Main dashboard with task overview
           ],
         ),
-        // Bottom navigation for quick access
-        bottomNavigationBar: _buildBottomNavigationBar(),
       ),
     );
   }
@@ -302,9 +301,9 @@ class _HomeScreenState extends State<HomeScreen> {
       
       // Navigate to login screen and clear stack
       if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(
+        Navigator.pushAndRemoveUntil(
           context,
-          '/login',
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
           (route) => false,
         );
       }
@@ -317,46 +316,6 @@ class _HomeScreenState extends State<HomeScreen> {
         _showErrorSnackBar('Logout failed: ${e.toString()}');
       }
     }
-  }
-
-  /// Builds bottom navigation bar for quick access
-  /// Provides visual feedback for current tab
-  Widget _buildBottomNavigationBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).primaryColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.insert_chart),
-            label: 'Reports',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-          ),
-        ],
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white.withOpacity(0.7),
-        backgroundColor: Colors.transparent,
-        type: BottomNavigationBarType.fixed,
-        elevation: 0,
-      ),
-    );
   }
 
   /// Shows error message in a snackbar

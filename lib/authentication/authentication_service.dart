@@ -79,10 +79,29 @@ class AuthenticationService extends ChangeNotifier {
       if (user == null) {
         return null;
       } else {
+        // Try to get user role from Firestore first, then fallback to SharedPreferences
+        String userRole = 'regular';
+        try {
+          final userDoc = await _userCollection.doc(user.uid).get();
+          if (userDoc.exists) {
+            final userData = userDoc.data() as Map<String, dynamic>?;
+            userRole = userData?['role'] ?? 'regular';
+            // Update SharedPreferences with the role from Firestore
+            await prefs.setString('userRole', userRole);
+          } else {
+            // Fallback to SharedPreferences if Firestore doesn't have the role
+            userRole = prefs.getString('userRole') ?? 'regular';
+          }
+        } catch (e) {
+          _logger.warning('Error loading user role from Firestore: $e');
+          // Fallback to SharedPreferences
+          userRole = prefs.getString('userRole') ?? 'regular';
+        }
+        
         return CustomUser(
           uid: user.uid,
           email: user.email!,
-          role: prefs.getString('userRole') ?? 'regular',
+          role: userRole,
           assignedProjects: [],
           name: user.displayName ?? '',
         );
@@ -137,10 +156,6 @@ class AuthenticationService extends ChangeNotifier {
       
       _validateSignInInput(name, email, password);
 
-      if (isRoleSelected) {
-        await _validateUserRole(name, email);
-      }
-
       _logger.fine('Attempting to sign in user: $email');
       
       try {
@@ -152,6 +167,11 @@ class AuthenticationService extends ChangeNotifier {
         if (userCredential.user == null) {
           _logger.warning('Authentication failed: No user returned');
           throw AuthException('Authentication failed');
+        }
+
+        // Validate user role from Firestore AFTER authentication
+        if (isRoleSelected) {
+          await _validateUserRole(name, email);
         }
 
         final customUser = CustomUser(
@@ -321,14 +341,17 @@ class AuthenticationService extends ChangeNotifier {
       final userData = query.docs.first.data();
       final storedRole = userData['role'] as String?;
       
-      if (storedRole != selectedRole) {
-        throw AuthValidationException('Role mismatch for user');
+      // Update selected role to match stored role for existing users
+      if (storedRole != null && storedRole.isNotEmpty) {
+        selectedRole = storedRole;
+        await prefs.setString('userRole', storedRole);
+        _logger.info('User role updated from database: $storedRole');
       }
     } catch (e) {
       if (e is AuthException) {
         rethrow;
       }
-      throw AuthNetworkException('Failed to validate user role');
+      throw AuthValidationException('Failed to validate user role: ${e.toString()}');
     }
   }
 }

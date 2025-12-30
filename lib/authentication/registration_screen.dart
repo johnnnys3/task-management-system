@@ -22,6 +22,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _adminCodeController = TextEditingController();
   
   // UI state variables
   bool _isLoading = false; // Tracks if registration is in progress
@@ -29,6 +30,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   bool _obscureConfirmPassword = true; // Toggles confirm password visibility
   String _selectedRole = 'regular'; // Default role
   bool _acceptTerms = false; // Tracks if terms are accepted
+  bool _showAdminCodeField = false; // Controls admin code field visibility
   
   // Logger instance for debugging
   final _logger = Logger('RegistrationScreen');
@@ -40,6 +42,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _adminCodeController.dispose();
     super.dispose();
   }
 
@@ -76,10 +79,21 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return null;
   }
 
-  /// Validates that the confirm password matches the password
+  /// Validates the confirm password input
   String? _validateConfirmPassword(String? value) {
     if (value != _passwordController.text) {
       return 'Passwords do not match';
+    }
+    return null;
+  }
+
+  /// Validates the admin code input
+  String? _validateAdminCode(String? value) {
+    if (_selectedRole == 'admin' && (value == null || value.isEmpty)) {
+      return 'Admin code is required for admin registration';
+    }
+    if (_selectedRole == 'admin' && value != 'ADMIN123') {
+      return 'Invalid admin code';
     }
     return null;
   }
@@ -254,10 +268,34 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   ],
                   selected: {_selectedRole},
                   onSelectionChanged: (Set<String> selection) {
-                    setState(() => _selectedRole = selection.first);
+                    setState(() {
+                      _selectedRole = selection.first;
+                      _showAdminCodeField = _selectedRole == 'admin';
+                    });
                   },
                 ),
                 const SizedBox(height: 16),
+                
+                // Admin code field (shown only when admin role is selected)
+                if (_showAdminCodeField) ...[
+                  const Text(
+                    'Admin Code',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _adminCodeController,
+                    decoration: const InputDecoration(
+                      labelText: 'Enter Admin Code',
+                      hintText: 'Required for admin registration',
+                      prefixIcon: Icon(Icons.security),
+                      border: OutlineInputBorder(),
+                    ),
+                    obscureText: true,
+                    validator: _validateAdminCode,
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 
                 // Terms and conditions checkbox
                 Row(

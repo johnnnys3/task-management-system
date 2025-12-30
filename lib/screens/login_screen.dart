@@ -210,88 +210,181 @@ class _LoginScreenState extends State<LoginScreen> {
     return Column(
       children: [
         // Name input field
-        TextFormField(
-          controller: nameController,
-          validator: _validateName,
-          decoration: InputDecoration(
-            labelText: 'Full Name',
-            hintText: 'Enter your full name',
-            prefixIcon: const Icon(Icons.person, color: Colors.white70),
-            labelStyle: const TextStyle(color: Colors.white70),
-            hintStyle: const TextStyle(color: Colors.white54),
-            filled: true,
-            fillColor: Colors.white.withOpacity(0.1),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: nameController,
+            validator: _validateName,
+            decoration: InputDecoration(
+              labelText: 'Full Name',
+              hintText: 'Enter your full name',
+              prefixIcon: Icon(Icons.person, color: Theme.of(context).primaryColor),
+              labelStyle: TextStyle(
+                color: Colors.grey.shade700,
+                fontWeight: FontWeight.w500,
+              ),
+              hintStyle: TextStyle(
+                color: Colors.grey.shade500,
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Colors.grey.shade300,
+                  width: 1,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Theme.of(context).primaryColor,
+                  width: 2,
+                ),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
             ),
           ),
-          style: const TextStyle(color: Colors.white),
         ),
         const SizedBox(height: 16),
         // Email input field
-        TextFormField(
-          controller: emailController,
-          validator: _validateEmail,
-          keyboardType: TextInputType.emailAddress,
-          decoration: InputDecoration(
-            labelText: 'Email Address',
-            hintText: 'Enter your email',
-            prefixIcon: const Icon(Icons.email, color: Colors.white70),
-            labelStyle: const TextStyle(color: Colors.white70),
-            hintStyle: const TextStyle(color: Colors.white54),
-            filled: true,
-            fillColor: Colors.white.withOpacity(0.1),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: emailController,
+            validator: _validateEmail,
+            keyboardType: TextInputType.emailAddress,
+            decoration: InputDecoration(
+              labelText: 'Email Address',
+              hintText: 'Enter your email',
+              prefixIcon: Icon(Icons.email, color: Theme.of(context).primaryColor),
+              labelStyle: TextStyle(
+                color: Colors.grey.shade700,
+                fontWeight: FontWeight.w500,
+              ),
+              hintStyle: TextStyle(
+                color: Colors.grey.shade500,
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Colors.grey.shade300,
+                  width: 1,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Theme.of(context).primaryColor,
+                  width: 2,
+                ),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
             ),
           ),
-          style: const TextStyle(color: Colors.white),
         ),
         const SizedBox(height: 16),
         // Password input field
-        TextFormField(
-          controller: passwordController,
-          validator: _validatePassword,
-          obscureText: _obscurePassword,
-          decoration: InputDecoration(
-            labelText: 'Password',
-            hintText: 'Enter your password',
-            prefixIcon: const Icon(Icons.lock, color: Colors.white70),
-            suffixIcon: IconButton(
-              icon: Icon(
-                _obscurePassword ? Icons.visibility : Icons.visibility_off,
-                color: Colors.white70,
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
               ),
-              onPressed: () {
-                setState(() {
-                  _obscurePassword = !_obscurePassword;
-                });
-              },
-            ),
-            labelStyle: const TextStyle(color: Colors.white70),
-            hintStyle: const TextStyle(color: Colors.white54),
-            filled: true,
-            fillColor: Colors.white.withOpacity(0.1),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
+            ],
+          ),
+          child: TextFormField(
+            controller: passwordController,
+            validator: _validatePassword,
+            obscureText: _obscurePassword,
+            decoration: InputDecoration(
+              labelText: 'Password',
+              hintText: 'Enter your password',
+              prefixIcon: Icon(Icons.lock, color: Theme.of(context).primaryColor),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                  color: Theme.of(context).primaryColor,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscurePassword = !_obscurePassword;
+                  });
+                },
+              ),
+              labelStyle: TextStyle(
+                color: Colors.grey.shade700,
+                fontWeight: FontWeight.w500,
+              ),
+              hintStyle: TextStyle(
+                color: Colors.grey.shade500,
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Colors.grey.shade300,
+                  width: 1,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Theme.of(context).primaryColor,
+                  width: 2,
+                ),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
             ),
           ),
-          style: const TextStyle(color: Colors.white),
         ),
       ],
     );
@@ -299,45 +392,112 @@ class _LoginScreenState extends State<LoginScreen> {
 
   /// Builds role selection dropdown
   Widget _buildRoleSelection(AuthenticationService authService) {
-    return DropdownButtonFormField<String>(
-      decoration: InputDecoration(
-        labelText: 'Role',
-        border: const OutlineInputBorder(),
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.1),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      initialValue: authService.selectedRole.isEmpty ? null : authService.selectedRole,
-      items: ['admin', 'regular'].map((role) {
-        return DropdownMenuItem(
-          value: role,
-          child: Text(role[0].toUpperCase() + role.substring(1)),
-        );
-      }).toList(),
-      onChanged: (value) {
-        if (value != null) {
-          authService.selectedRole = value;
-        }
-      },
+      child: DropdownButtonFormField<String>(
+        decoration: InputDecoration(
+          labelText: 'Role',
+          prefixIcon: Icon(Icons.work, color: Theme.of(context).primaryColor),
+          labelStyle: TextStyle(
+            color: Colors.grey.shade700,
+            fontWeight: FontWeight.w500,
+          ),
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: Colors.grey.shade300,
+              width: 1,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: Theme.of(context).primaryColor,
+              width: 2,
+            ),
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
+        ),
+        value: authService.selectedRole.isEmpty ? null : authService.selectedRole,
+        hint: const Text('Select your role'),
+        items: ['admin', 'regular'].map((role) {
+          return DropdownMenuItem(
+            value: role,
+            child: Text(
+              role[0].toUpperCase() + role.substring(1),
+              style: TextStyle(color: Colors.grey.shade800),
+            ),
+          );
+        }).toList(),
+        onChanged: (value) {
+          if (value != null) {
+            authService.selectedRole = value;
+            authService.isRoleSelected = true;
+          }
+        },
+      ),
     );
   }
 
   /// Builds login button
   Widget _buildLoginButton(AuthenticationService authService) {
-    return SizedBox(
-      width: double.infinity,
+    return Container(
       height: 50,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: ElevatedButton(
         onPressed: _isLoading ? null : () => _handleLogin(authService),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blue.shade600,
-          foregroundColor: Colors.white,
+          backgroundColor: Colors.white,
+          foregroundColor: Theme.of(context).primaryColor,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(25),
+            borderRadius: BorderRadius.circular(12),
           ),
+          elevation: 0,
         ),
         child: _isLoading
-            ? const CircularProgressIndicator(color: Colors.white)
-            : const Text('Login', style: TextStyle(fontSize: 16)),
+            ? SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(
+                  color: Theme.of(context).primaryColor,
+                  strokeWidth: 2,
+                ),
+              )
+            : const Text(
+                'Login',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
       ),
     );
   }
@@ -351,9 +511,13 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(builder: (context) => const RegistrationScreen()),
         );
       },
-      child: Text(
+      child: const Text(
         'Don\'t have an account? Register',
-        style: TextStyle(color: Colors.blue.shade200),
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
@@ -361,6 +525,17 @@ class _LoginScreenState extends State<LoginScreen> {
   /// Handles login process
   Future<void> _handleLogin(AuthenticationService authService) async {
     if (_formKey.currentState!.validate()) {
+      // Check if role is selected
+      if (authService.selectedRole.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select a role'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       setState(() {
         _isLoading = true;
       });
@@ -375,11 +550,13 @@ class _LoginScreenState extends State<LoginScreen> {
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => HomeScreen(
-              user: user,
-              userId: user.uid,
-              isAdmin: authService.isAdmin,
-            )),
+            MaterialPageRoute(
+              builder: (context) => HomeScreen(
+                user: user,
+                userId: user.uid,
+                isAdmin: authService.isAdmin,
+              ),
+            ),
           );
         }
       } catch (e) {
@@ -388,6 +565,11 @@ class _LoginScreenState extends State<LoginScreen> {
             SnackBar(
               content: Text('Login failed: ${e.toString()}'),
               backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           );
         }

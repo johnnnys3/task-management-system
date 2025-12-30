@@ -13,6 +13,7 @@ import 'package:task_management/authentication/user.dart';
 import 'package:task_management/models/task_list_notifier.dart';
 import 'package:task_management/screens/home_screen.dart';
 import 'package:task_management/screens/login_screen.dart';
+import 'package:task_management/service/notification_service.dart';
 
 /// Global logger for application-wide logging
 final Logger _logger = Logger('TaskManagementApp');
@@ -31,8 +32,14 @@ Future<void> main() async {
     await FirebaseConfig.initialize();
     _logger.info('Firebase initialized successfully');
     
+    // Initialize notification service
+    final notificationService = NotificationService();
+    await notificationService.initialize();
+    notificationService.startNotificationScheduler();
+    _logger.info('Notification service started');
+    
     // Run the application with error handling
-    await _runAppWithErrorHandling();
+    await _runAppWithErrorHandling(notificationService);
   } catch (e, stackTrace) {
     _logger.severe('Failed to initialize application', e, stackTrace);
     runApp(ErrorApp(error: e.toString()));
@@ -48,18 +55,18 @@ void _initializeLogging() {
   // Configure log output with detailed formatting
   Logger.root.onRecord.listen((record) {
     final buffer = StringBuffer();
-    buffer.writeln('[${record.level.name}] ${record.time}: ${record.message}');
+    buffer.write('[${record.level.name}] ${record.time}: ${record.message}');
     
     if (record.error != null) {
-      buffer.writeln('Error: ${record.error}');
+      buffer.write('\nError: ${record.error}');
     }
     
     if (record.stackTrace != null) {
-      buffer.writeln('Stack trace: ${record.stackTrace}');
+      buffer.write('\nStack trace: ${record.stackTrace}');
     }
     
     // Print formatted log message
-    print(buffer.toString());
+    debugPrint(buffer.toString());
   });
   
   _logger.info('Logging system initialized');
@@ -67,7 +74,7 @@ void _initializeLogging() {
 
 /// Runs the app with comprehensive error handling
 /// Catches and handles unhandled errors gracefully
-Future<void> _runAppWithErrorHandling() async {
+Future<void> _runAppWithErrorHandling(NotificationService notificationService) async {
   // Set up global error handlers
   FlutterError.onError = (FlutterErrorDetails details) {
     _logger.severe(
@@ -77,14 +84,19 @@ Future<void> _runAppWithErrorHandling() async {
     );
   };
   
-  // Run the main app
-  runApp(const TaskManagementApp());
+  // Run the main app with notification service provider
+  runApp(TaskManagementApp(notificationService: notificationService));
 }
 
 /// Main application widget with comprehensive theming and configuration
 /// Provides Material Design 3 theming, responsive design, and accessibility features
 class TaskManagementApp extends StatelessWidget {
-  const TaskManagementApp({super.key});
+  final NotificationService notificationService;
+  
+  const TaskManagementApp({
+    super.key,
+    required this.notificationService,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -99,6 +111,10 @@ class TaskManagementApp extends StatelessWidget {
         ChangeNotifierProvider<TaskListNotifier>(
           create: (context) => TaskListNotifier(),
           lazy: true, // Initialize only when needed
+        ),
+        // Notification service provider
+        Provider<NotificationService>.value(
+          value: notificationService,
         ),
       ],
       child: MaterialApp(
@@ -120,7 +136,7 @@ class TaskManagementApp extends StatelessWidget {
           return MediaQuery(
             // Ensure minimum text scale for accessibility
             data: MediaQuery.of(context).copyWith(
-              textScaler: TextScaler.linear(MediaQuery.of(context).textScaleFactor.clamp(0.8, 2.0)),
+              textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(0.8, 2.0),
             ),
             child: child!,
           );
@@ -140,40 +156,53 @@ class TaskManagementApp extends StatelessWidget {
     );
   }
 
-  /// Builds the primary light theme
-  /// Material Design 3 with orange accent and comprehensive styling
+  /// Builds primary light theme
+  /// Material Design 3 with purple productivity theme
+  /// Represents focus, efficiency, and professional task management
   ThemeData _buildTheme() {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.orange,
+        seedColor: const Color(0xFF6B46C1), // Professional purple
         brightness: Brightness.light,
+      ).copyWith(
+        primary: const Color(0xFF6B46C1), // Deep Purple
+        secondary: const Color(0xFF9C27B0), // Accent Purple
+        surface: Colors.white, // Clean white surfaces
+        onPrimary: Colors.white, // White text on purple
+        onSecondary: Colors.white, // White text on purple
+        error: const Color(0xFFE53935), // Soft Red
+        onError: Colors.white, // White text on red
       ),
+      scaffoldBackgroundColor: const Color(0xFFF8F9FF), // Very light purple background
       
-      // App bar theming
       appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF6B46C1), // Deep Purple
+        foregroundColor: Colors.white,
         elevation: 2,
         centerTitle: true,
-        scrolledUnderElevation: 4,
+        scrolledUnderElevation: 2,
         titleTextStyle: TextStyle(
-          fontSize: 18,
+          fontSize: 20,
           fontWeight: FontWeight.w600,
           color: Colors.white,
         ),
       ),
       
-      // Card theming
       cardTheme: CardThemeData(
-        elevation: 2,
+        color: Colors.white,
+        shadowColor: Colors.black.withOpacity(0.1),
+        elevation: 4,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       ),
       
-      // Elevated button theming
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF9C27B0), // Purple
+          foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -182,76 +211,185 @@ class TaskManagementApp extends StatelessWidget {
         ),
       ),
       
-      // Input decoration theming
       inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.white,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
-        filled: true,
-        fillColor: Colors.grey[50],
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFE0E0E6), // Light Purple border
+            width: 1,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFF6B46C1), // Deep Purple focus
+            width: 2,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFE53935), // Red error
+            width: 1,
+          ),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFE53935), // Red error
+            width: 2,
+          ),
+        ),
+        labelStyle: const TextStyle(
+          color: Color(0xFF6B46C1), // Deep Purple labels
+          fontWeight: FontWeight.w500,
+        ),
+        hintStyle: const TextStyle(
+          color: Color(0xFF9E9E9E), // Medium Purple hints
+        ),
+        prefixIconColor: const Color(0xFF6B46C1), // Deep Purple icons
+        suffixIconColor: const Color(0xFF9C27B0), // Accent Purple icons
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 12,
         ),
       ),
       
-      // Visual density and spacing
-        visualDensity: VisualDensity.adaptivePlatformDensity,
+      visualDensity: VisualDensity.adaptivePlatformDensity,
       
-      // Typography
-        textTheme: const TextTheme(
-          headlineLarge: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-          ),
-          headlineMedium: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w600,
-          ),
-          bodyLarge: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.normal,
-          ),
-          bodyMedium: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.normal,
-          ),
+      textTheme: const TextTheme(
+        displayLarge: TextStyle(
+          fontSize: 32,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF6B46C1), // Deep Purple
+          letterSpacing: 1.2,
         ),
+        headlineMedium: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF6B46C1), // Deep Purple
+        ),
+        bodyLarge: TextStyle(
+          fontSize: 16,
+          color: Color(0xFF2D3748), // Dark text
+          fontWeight: FontWeight.w500,
+        ),
+        bodyMedium: TextStyle(
+          fontSize: 14,
+          color: Color(0xFF2D3748), // Dark text
+        ),
+      ),
+      // Add text field theme for input text visibility
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: const Color(0xFF6B46C1), // Purple cursor
+        selectionColor: const Color(0xFF6B46C1).withOpacity(0.3), // Purple selection
+        selectionHandleColor: const Color(0xFF6B46C1), // Purple handles
+      ),
     );
   }
 
-  /// Builds the dark theme
-  /// Material Design 3 dark theme with orange accent
+  /// Builds dark theme
+  /// Material Design 3 dark theme with purple productivity theme
   ThemeData _buildDarkTheme() {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.orange,
+        seedColor: const Color(0xFF6B46C1), // Professional purple
         brightness: Brightness.dark,
+      ).copyWith(
+        primary: const Color(0xFF9C27B0), // Lighter purple for dark mode
+        secondary: const Color(0xFFB39DDB), // Light accent purple
+        surface: const Color(0xFF1A1A2E), // Dark surface
+        onPrimary: Colors.white, // White text on purple
+        onSecondary: Colors.white, // White text on purple
+        error: const Color(0xFFEF5350), // Lighter red for dark mode
+        onError: Colors.white, // White text on red
       ),
+      scaffoldBackgroundColor: const Color(0xFF0F0F1E), // Very dark background
       
-      // Dark theme specific configurations
       appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF1A1A2E), // Dark surface
+        foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
         scrolledUnderElevation: 2,
+        titleTextStyle: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
       ),
       
       cardTheme: CardThemeData(
-        elevation: 4,
+        color: const Color(0xFF2D3748), // Dark cards
+        shadowColor: Colors.black.withOpacity(0.3),
+        elevation: 6,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       ),
       
-      // Apply same theming as light theme
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF9C27B0), // Purple
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 2,
+        ),
+      ),
+      
       inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFF2D3748), // Dark input background
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
-        filled: true,
-        fillColor: Colors.grey[800],
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFF4A5568), // Medium dark border
+            width: 1,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFF9C27B0), // Purple focus
+            width: 2,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFEF5350), // Red error
+            width: 1,
+          ),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFEF5350), // Red error
+            width: 2,
+          ),
+        ),
+        labelStyle: const TextStyle(
+          color: Color(0xFFB39DDB), // Light purple labels
+          fontWeight: FontWeight.w500,
+        ),
+        hintStyle: const TextStyle(
+          color: Color(0xFF718096), // Gray hints
+        ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 12,
@@ -347,31 +485,58 @@ class LoadingScreen extends StatelessWidget {
           children: [
             // App logo or icon
             Container(
-              width: 80,
-              height: 80,
+              width: 100,
+              height: 100,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-                borderRadius: BorderRadius.circular(16),
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).colorScheme.primary,
+                    Theme.of(context).colorScheme.secondary,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
               child: const Icon(
-                Icons.task,
-                size: 40,
+                Icons.task_alt,
+                size: 50,
                 color: Colors.white,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
             // Loading indicator
-            CircularProgressIndicator(
-              color: Theme.of(context).colorScheme.primary,
+            SizedBox(
+              width: 50,
+              height: 50,
+              child: CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.primary,
+                strokeWidth: 4,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             // Loading text
             Text(
-              'Loading Task Manager...',
+              'Loading TaskHub...',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 18,
                 color: Theme.of(context).colorScheme.onSurface,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Please wait',
+              style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
             ),
           ],
@@ -401,8 +566,8 @@ class ErrorScreen extends StatelessWidget {
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text('Error'),
-        backgroundColor: Theme.of(context).colorScheme.errorContainer,
-        foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
+        backgroundColor: Theme.of(context).colorScheme.error,
+        foregroundColor: Colors.white,
       ),
       body: Center(
         child: Padding(
@@ -411,10 +576,18 @@ class ErrorScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // Error icon
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Theme.of(context).colorScheme.error,
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.error.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.error_outline,
+                  size: 48,
+                  color: Theme.of(context).colorScheme.error,
+                ),
               ),
               const SizedBox(height: 24),
               // Error title
@@ -443,9 +616,9 @@ class ErrorScreen extends StatelessWidget {
                 ElevatedButton.icon(
                   onPressed: onRetry,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
+                  label: const Text('Try Again'),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                   ),
                 ),
             ],
@@ -466,56 +639,84 @@ class ErrorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       home: Scaffold(
         backgroundColor: Colors.red.shade50,
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.error,
-                  size: 64,
-                  color: Colors.red,
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Critical Error',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'The application failed to start. Please restart the app.',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.red,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                if (kDebugMode)
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    width: 80,
+                    height: 80,
                     decoration: BoxDecoration(
                       color: Colors.red.shade100,
-                      borderRadius: BorderRadius.circular(8),
+                      shape: BoxShape.circle,
                     ),
-                    child: Text(
-                      error,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontFamily: 'monospace',
-                        color: Colors.red,
-                      ),
+                    child: const Icon(
+                      Icons.error,
+                      size: 48,
+                      color: Colors.red,
                     ),
                   ),
-              ],
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Critical Error',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'The application failed to start.',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.red,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Please restart the app or contact support.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.red,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  if (kDebugMode) ...[
+                    const SizedBox(height: 24),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.red.shade300,
+                          width: 1,
+                        ),
+                      ),
+                      child: SingleChildScrollView(
+                        child: Text(
+                          error,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontFamily: 'monospace',
+                            color: Colors.red,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         ),
