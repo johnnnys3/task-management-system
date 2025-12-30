@@ -1,6 +1,7 @@
 /// Advanced task list screen for comprehensive task management
 /// Provides rich task display with modern UI and interactive features
 /// Includes filtering, sorting, search, and batch operations
+library;
 import 'package:flutter/material.dart';
 import 'package:task_management/authentication/user.dart';
 import 'package:task_management/models/task.dart' as TaskModel;
@@ -20,12 +21,12 @@ class TaskListScreen extends StatefulWidget {
   final List<TaskModel.Task> tasks;
 
   const TaskListScreen({
-    Key? key,
+    super.key,
     required this.userId,
     required this.user,
     required this.isAdmin,
     required this.tasks,
-  }) : super(key: key);
+  });
 
   @override
   _TaskListScreenState createState() => _TaskListScreenState();
@@ -913,14 +914,14 @@ class TaskListItem extends StatelessWidget {
   final void Function(String)? onSelectionToggle;
 
   const TaskListItem({
-    Key? key,
+    super.key,
     required this.task,
     required this.onTaskTap,
     this.onUpdateTask,
     this.onDeleteTask,
     this.isSelected = false,
     this.onSelectionToggle,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1220,10 +1221,10 @@ class ErrorDisplay extends StatelessWidget {
   final VoidCallback? onRetry;
 
   const ErrorDisplay({
-    Key? key,
+    super.key,
     required this.message,
     this.onRetry,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

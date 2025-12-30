@@ -1,6 +1,7 @@
 /// Main application entry point for the Task Management System
 /// Provides comprehensive app initialization, theming, and authentication handling
 /// Includes advanced logging, error handling, and responsive design features
+library;
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -83,7 +84,7 @@ Future<void> _runAppWithErrorHandling() async {
 /// Main application widget with comprehensive theming and configuration
 /// Provides Material Design 3 theming, responsive design, and accessibility features
 class TaskManagementApp extends StatelessWidget {
-  const TaskManagementApp({Key? key}) : super(key: key);
+  const TaskManagementApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -264,69 +265,22 @@ class TaskManagementApp extends StatelessWidget {
 
 /// Authentication wrapper widget with comprehensive user state management
 /// Handles authentication flow, admin role checking, and error recovery
-class AuthenticationWrapper extends StatefulWidget {
-  const AuthenticationWrapper({Key? key}) : super(key: key);
-
-  @override
-  State<AuthenticationWrapper> createState() => _AuthenticationWrapperState();
-}
-
-class _AuthenticationWrapperState extends State<AuthenticationWrapper> {
-  late final AuthenticationService _authService;
-  StreamSubscription<CustomUser?>? _authSubscription;
-  
-  @override
-  void initState() {
-    super.initState();
-    _authService = Provider.of<AuthenticationService>(context, listen: false);
-    _setupAuthListener();
-  }
-  
-  @override
-  void dispose() {
-    _authSubscription?.cancel();
-    super.dispose();
-  }
-  
-  /// Sets up authentication state listener
-  /// Monitors auth changes and handles errors
-  void _setupAuthListener() {
-    _authSubscription = _authService.authStateChanges.listen(
-      (user) {
-        _logger.info('Authentication state changed: ${user?.uid ?? 'null'}');
-      },
-      onError: (error) {
-        _logger.severe('Authentication stream error', error);
-        _handleAuthError(error);
-      },
-    );
-  }
-  
-  /// Handles authentication errors
-  /// Provides user feedback and recovery options
-  void _handleAuthError(Object error) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Authentication error: ${error.toString()}'),
-          backgroundColor: Colors.red,
-          action: SnackBarAction(
-            label: 'Retry',
-            onPressed: () {
-              // Trigger auth state refresh
-              setState(() {});
-            },
-          ),
-        ),
-      );
-    }
-  }
+class AuthenticationWrapper extends StatelessWidget {
+  const AuthenticationWrapper({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Get the auth service without listening to it
+    final authService = Provider.of<AuthenticationService>(context, listen: false);
+    
     return StreamBuilder<CustomUser?>(
-      stream: _authService.authStateChanges,
+      stream: authService.authStateChanges,
       builder: (context, snapshot) {
+        // Log authentication state changes
+        if (snapshot.hasData) {
+          _logger.info('Authentication state changed: ${snapshot.data?.uid ?? 'null'}');
+        }
+        
         // Handle loading state
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const LoadingScreen();
@@ -338,7 +292,12 @@ class _AuthenticationWrapperState extends State<AuthenticationWrapper> {
           return ErrorScreen(
             title: 'Authentication Error',
             message: 'Failed to load authentication state. Please try again.',
-            onRetry: () => setState(() {}),
+            onRetry: () {
+              // Trigger a rebuild by creating a new widget
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const AuthenticationWrapper()),
+              );
+            },
           );
         }
         
@@ -347,7 +306,7 @@ class _AuthenticationWrapperState extends State<AuthenticationWrapper> {
         // Handle authenticated user
         if (user != null) {
           try {
-            final isAdmin = _authService.isAdmin;
+            final isAdmin = authService.isAdmin;
             _logger.info('User authenticated: ${user.uid}, Admin: $isAdmin');
             
             return HomeScreen(
@@ -376,7 +335,7 @@ class _AuthenticationWrapperState extends State<AuthenticationWrapper> {
 /// Loading screen widget for showing during authentication initialization
 /// Provides a clean loading experience with branding
 class LoadingScreen extends StatelessWidget {
-  const LoadingScreen({Key? key}) : super(key: key);
+  const LoadingScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -430,11 +389,11 @@ class ErrorScreen extends StatelessWidget {
   final VoidCallback? onRetry;
   
   const ErrorScreen({
-    Key? key,
+    super.key,
     required this.title,
     required this.message,
     this.onRetry,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -502,7 +461,7 @@ class ErrorScreen extends StatelessWidget {
 class ErrorApp extends StatelessWidget {
   final String error;
   
-  const ErrorApp({Key? key, required this.error}) : super(key: key);
+  const ErrorApp({super.key, required this.error});
 
   @override
   Widget build(BuildContext context) {

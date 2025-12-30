@@ -1,6 +1,7 @@
 /// Advanced project update screen for comprehensive project editing
 /// Provides rich project editing interface with modern UI and validation
 /// Includes form validation, error handling, and user feedback
+library;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:task_management/data/database_helper(project).dart';
@@ -15,11 +16,11 @@ class UpdateProjectScreen extends StatefulWidget {
   final bool isAdmin;
 
   const UpdateProjectScreen({
-    Key? key,
+    super.key,
     required this.project,
     this.userId,
     this.isAdmin = false,
-  }) : super(key: key);
+  });
 
   @override
   _UpdateProjectScreenState createState() => _UpdateProjectScreenState();

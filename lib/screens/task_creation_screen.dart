@@ -1,6 +1,7 @@
 /// Advanced task creation screen for comprehensive task management
 /// Provides form validation, member assignment, and project integration
 /// Includes modern UI with proper error handling and loading states
+library;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
@@ -13,9 +14,9 @@ class CreateTask extends StatefulWidget {
   final List<String> availableProjects;
 
   const CreateTask({
-    Key? key,
+    super.key,
     required this.availableProjects,
-  }) : super(key: key);
+  });
 
   @override
   _CreateTaskState createState() => _CreateTaskState();

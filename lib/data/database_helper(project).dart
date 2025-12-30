@@ -20,8 +20,8 @@ class ProjectNotFoundException extends ProjectDatabaseException {
 }
 
 class ProjectValidationException extends ProjectDatabaseException {
-  ProjectValidationException(String message) 
-      : super(message, code: 'validation-error');
+  ProjectValidationException(super.message) 
+      : super(code: 'validation-error');
 }
 
 /// Handles all database operations for projects

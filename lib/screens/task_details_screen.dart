@@ -1,6 +1,7 @@
 /// Advanced task details screen for comprehensive task information display
 /// Provides rich task information with modern UI and interactive features
 /// Includes status management, attachments, and action buttons
+library;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -13,9 +14,9 @@ class TaskDetailsScreen extends StatefulWidget {
   final Task task;
 
   const TaskDetailsScreen({
-    Key? key,
+    super.key,
     required this.task,
-  }) : super(key: key);
+  });
 
   @override
   _TaskDetailsScreenState createState() => _TaskDetailsScreenState();

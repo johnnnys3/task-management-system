@@ -20,8 +20,8 @@ class TaskNotFoundException extends TaskDatabaseException {
 }
 
 class TaskValidationException extends TaskDatabaseException {
-  TaskValidationException(String message) 
-      : super(message, code: 'validation-error');
+  TaskValidationException(super.message) 
+      : super(code: 'validation-error');
 }
 
 /// Handles all database operations for tasks

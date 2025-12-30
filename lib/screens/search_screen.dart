@@ -1,6 +1,7 @@
 /// Advanced search screen for comprehensive task discovery
 /// Provides real-time search, filtering, and advanced search options
 /// Includes search history, suggestions, and result management
+library;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:task_management/models/task.dart';

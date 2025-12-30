@@ -1,6 +1,7 @@
 /// Reporting screen for comprehensive task analytics and insights
 /// Provides visual charts, statistics, and performance metrics
 /// Includes real-time data updates and export functionality
+library;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:task_management/data/database_helper(task).dart';

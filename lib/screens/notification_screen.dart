@@ -1,6 +1,7 @@
 /// Notification screen for displaying task-related alerts and updates
 /// Provides comprehensive notification management with filtering and actions
 /// Includes real-time updates and user interaction features
+library;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:task_management/models/task.dart';

@@ -1,6 +1,7 @@
 /// Advanced task update screen for comprehensive task editing
 /// Provides rich task editing interface with modern UI and validation
 /// Includes form validation, error handling, and user feedback
+library;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:task_management/models/task.dart';
@@ -15,11 +16,11 @@ class UpdateTaskScreen extends StatefulWidget {
   final bool isAdmin;
 
   const UpdateTaskScreen({
-    Key? key,
+    super.key,
     required this.task,
     this.userId,
     this.isAdmin = false,
-  }) : super(key: key);
+  });
 
   @override
   _UpdateTaskScreenState createState() => _UpdateTaskScreenState();

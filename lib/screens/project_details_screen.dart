@@ -1,6 +1,7 @@
 /// Project details screen for displaying comprehensive project information
 /// Provides project management features including editing, task viewing, and status updates
 /// Includes real-time data fetching and error handling
+library;
 import 'package:flutter/material.dart';
 import 'package:task_management/models/project.dart';
 import 'package:intl/intl.dart';

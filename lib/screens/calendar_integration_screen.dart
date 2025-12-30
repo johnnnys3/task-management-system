@@ -164,10 +164,10 @@ class TaskWidget extends StatelessWidget {
   final VoidCallback? onTaskUpdated; // Callback when task is updated
 
   const TaskWidget({
-    Key? key,
+    super.key,
     required this.task,
     this.onTaskUpdated,
-  }) : super(key: key);
+  });
 
   /// Builds the task card with status indicator and details
   @override

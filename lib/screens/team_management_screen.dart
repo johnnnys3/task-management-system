@@ -1,6 +1,7 @@
 /// Advanced team management screen for comprehensive team operations
 /// Provides rich team display with modern UI and interactive features
 /// Includes team creation, member management, and role assignments
+library;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:task_management/models/team.dart';
@@ -12,10 +13,10 @@ class TeamManagementScreen extends StatefulWidget {
   final bool isAdmin;
 
   const TeamManagementScreen({
-    Key? key,
+    super.key,
     required this.userId,
     this.isAdmin = false,
-  }) : super(key: key);
+  });
 
   @override
   _TeamManagementScreenState createState() => _TeamManagementScreenState();
@@ -523,13 +524,13 @@ class TeamListItem extends StatelessWidget {
   final bool isMember;
 
   const TeamListItem({
-    Key? key,
+    super.key,
     required this.team,
     required this.onTap,
     this.onUpdateTeam,
     this.onDeleteTeam,
     this.isMember = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

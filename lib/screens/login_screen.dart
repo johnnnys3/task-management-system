@@ -1,9 +1,12 @@
 /// Login screen for user authentication
 /// Provides secure access to the task management application
 /// Includes form validation, error handling, and role-based authentication
+library;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:task_management/authentication/authentication_service.dart';
+import 'package:task_management/authentication/registration_screen.dart';
+import 'package:task_management/screens/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -343,7 +346,10 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildRegistrationLink() {
     return TextButton(
       onPressed: () {
-        // Navigate to registration screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const RegistrationScreen()),
+        );
       },
       child: Text(
         'Don\'t have an account? Register',
@@ -360,14 +366,21 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       try {
-        await authService.signIn(
+        final user = await authService.signIn(
           nameController.text.trim(),
           emailController.text.trim(),
           passwordController.text,
         );
         
         if (mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => HomeScreen(
+              user: user,
+              userId: user.uid,
+              isAdmin: authService.isAdmin,
+            )),
+          );
         }
       } catch (e) {
         if (mounted) {

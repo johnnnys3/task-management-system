@@ -7,7 +7,7 @@ import 'package:task_management/screens/login_screen.dart';
 
 /// RegistrationScreen handles user registration with email, password, and role selection
 class RegistrationScreen extends StatefulWidget {
-  const RegistrationScreen({Key? key}) : super(key: key);
+  const RegistrationScreen({super.key});
 
   @override
   _RegistrationScreenState createState() => _RegistrationScreenState();

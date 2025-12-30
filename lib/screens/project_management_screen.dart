@@ -1,6 +1,7 @@
 /// Project management screen for comprehensive project oversight
 /// Provides CRUD operations, filtering, and project analytics
 /// Includes role-based access control and modern UI design
+library;
 import 'package:flutter/material.dart';
 import 'package:task_management/authentication/user.dart';
 import 'package:task_management/models/project.dart' as TaskProject;

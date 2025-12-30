@@ -1,6 +1,7 @@
 /// Main navigation screen for the task management application
 /// Provides access to all major features through tabs and navigation
 /// Handles user authentication and role-based access
+library;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:task_management/authentication/authentication_service.dart';
@@ -20,11 +21,11 @@ class HomeScreen extends StatefulWidget {
   final bool isAdmin; // Administrative privileges flag
 
   const HomeScreen({
-    Key? key,
+    super.key,
     required this.userId, 
     required this.user, 
     required this.isAdmin
-  }) : super(key: key);
+  });
 
   @override
   _HomeScreenState createState() => _HomeScreenState();

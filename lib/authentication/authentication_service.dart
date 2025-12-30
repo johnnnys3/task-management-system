@@ -17,15 +17,15 @@ class AuthException implements Exception {
 }
 
 class AuthValidationException extends AuthException {
-  AuthValidationException(String message) : super(message, code: 'validation');
+  AuthValidationException(super.message) : super(code: 'validation');
 }
 
 class AuthNetworkException extends AuthException {
-  AuthNetworkException(String message) : super(message, code: 'network');
+  AuthNetworkException(super.message) : super(code: 'network');
 }
 
 class AuthUserNotFoundException extends AuthException {
-  AuthUserNotFoundException(String message) : super(message, code: 'user-not-found');
+  AuthUserNotFoundException(super.message) : super(code: 'user-not-found');
 }
 
 class AuthWrongCredentialsException extends AuthException {
@@ -35,10 +35,12 @@ class AuthWrongCredentialsException extends AuthException {
 class AuthenticationService extends ChangeNotifier {
   static final Logger _logger = Logger('AuthenticationService');
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  late StreamController<CustomUser?> _authStateController;
   late SharedPreferences prefs;
   final CollectionReference<Map<String, dynamic>> _userCollection =
       FirebaseFirestore.instance.collection('users');
+  
+  bool _isInitialized = false;
+  bool get isInitialized => _isInitialized;
   
   bool _isRoleSelected = false;
   bool get isRoleSelected => _isRoleSelected;
@@ -54,44 +56,71 @@ class AuthenticationService extends ChangeNotifier {
     notifyListeners();
   }
 
-  CustomUser? get currentUser => _auth.currentUser != null
-      ? CustomUser(
-          uid: _auth.currentUser!.uid,
-          email: _auth.currentUser!.email!,
-          role: prefs.getString('userRole') ?? 'regular',
-          assignedProjects: [],
-          name: _auth.currentUser!.displayName ?? '',
-        )
-      : null;
-
-  Stream<CustomUser?> get authStateChanges {
-    return _authStateController.stream;
+  CustomUser? get currentUser {
+    if (!_isInitialized) return null;
+    return _auth.currentUser != null
+        ? CustomUser(
+            uid: _auth.currentUser!.uid,
+            email: _auth.currentUser!.email!,
+            role: prefs.getString('userRole') ?? 'regular',
+            assignedProjects: [],
+            name: _auth.currentUser!.displayName ?? '',
+          )
+        : null;
   }
 
-  bool get keepSignedIn => prefs.getBool('keepSignedIn') ?? false;
+  Stream<CustomUser?> get authStateChanges {
+    return _auth.authStateChanges().asyncMap((User? user) async {
+      // Wait for initialization before accessing prefs
+      if (!_isInitialized) {
+        await init();
+      }
+      
+      if (user == null) {
+        return null;
+      } else {
+        return CustomUser(
+          uid: user.uid,
+          email: user.email!,
+          role: prefs.getString('userRole') ?? 'regular',
+          assignedProjects: [],
+          name: user.displayName ?? '',
+        );
+      }
+    }).asBroadcastStream();
+  }
+
+  bool get keepSignedIn {
+    if (!_isInitialized) return false;
+    return prefs.getBool('keepSignedIn') ?? false;
+  }
+  
   set keepSignedIn(bool value) {
+    if (!_isInitialized) return;
     prefs.setBool('keepSignedIn', value);
     notifyListeners();
   }
 
-  bool get isAdmin => prefs.getString('userRole') == 'admin';
+  bool get isAdmin {
+    if (!_isInitialized) return false;
+    return prefs.getString('userRole') == 'admin';
+  }
 
   AuthenticationService() {
-    _authStateController = StreamController<CustomUser?>();
     init();
   }
 
   Future<void> init() async {
-    SharedPreferences.getInstance().then((prefs) {
-      prefs = prefs;
-      _auth.authStateChanges().listen((User? user) {
-        if (user == null) {
-          _authStateController.add(null);
-        } else {
-          _authStateController.add(currentUser);
-        }
-      });
-    });
+    if (_isInitialized) return;
+    try {
+      prefs = await SharedPreferences.getInstance();
+      _isInitialized = true;
+      _logger.info('AuthenticationService initialized successfully');
+      notifyListeners();
+    } catch (e) {
+      _logger.severe('Failed to initialize AuthenticationService', e);
+      rethrow;
+    }
   }
 
   /// Validates user credentials and signs in the user
@@ -101,6 +130,11 @@ class AuthenticationService extends ChangeNotifier {
   /// Throws [AuthNetworkException] for network-related errors
   Future<CustomUser> signIn(String name, String email, String password) async {
     try {
+      // Ensure service is initialized
+      if (!_isInitialized) {
+        await init();
+      }
+      
       _validateSignInInput(name, email, password);
 
       if (isRoleSelected) {
@@ -153,6 +187,11 @@ class AuthenticationService extends ChangeNotifier {
   /// Throws [AuthException] for other authentication errors
   Future<CustomUser> signUp(String name, String email, String password, String role) async {
     try {
+      // Ensure service is initialized
+      if (!_isInitialized) {
+        await init();
+      }
+      
       _validateSignUpInput(name, email, password, role);
       _logger.fine('Attempting to create user: $email');
 
@@ -233,7 +272,8 @@ class AuthenticationService extends ChangeNotifier {
   Future<void> signOut() async {
     try {
       await _auth.signOut();
-      _authStateController.add(null);
+      notifyListeners();
+      _logger.info('User signed out successfully');
     } catch (e) {
       _logger.warning('SignOut Error: $e');
       rethrow;
@@ -242,7 +282,7 @@ class AuthenticationService extends ChangeNotifier {
 
   @override
   void notifyListeners() {
-    _authStateController.add(currentUser);
+    super.notifyListeners();
   }
 
   /// Validates sign in input parameters
