@@ -4,8 +4,7 @@
 library;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:task_management/models/task.dart';
-import 'package:task_management/data/database_helper(task).dart';
+import 'package:task_management/domain/entities/task_entity.dart';
 import 'task_details_screen.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -18,9 +17,9 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   // State variables
   final TextEditingController _searchController = TextEditingController();
-  final TaskDatabase _taskDatabase = TaskDatabase();
-  List<Task> _allTasks = []; // All tasks for searching
-  List<Task> _searchResults = []; // Filtered search results
+  // Note: Database will be handled by the new architecture
+  List<TaskEntity> _allTasks = []; // All tasks for searching
+  List<TaskEntity> _searchResults = []; // Current search results
   List<String> _searchHistory = []; // Search history
   bool _isLoading = false; // Loading state
   String _errorMessage = ''; // Error message
@@ -57,7 +56,9 @@ class _SearchScreenState extends State<SearchScreen> {
         _isLoading = true;
       });
       
-      final tasks = await _taskDatabase.fetchTasks();
+      // Note: This will be handled by the new architecture
+      // final tasks = await TaskDatabase().fetchTasks();
+      final tasks = <TaskEntity>[]; // Placeholder
       
       if (mounted) {
         setState(() {
@@ -135,8 +136,8 @@ class _SearchScreenState extends State<SearchScreen> {
           matches = matches || task.description.toLowerCase().contains(lowerQuery);
         }
         
-        // Search in project
-        if (_searchInProject && task.associatedProject?.id != null) {
+        // Search in project (TaskEntity uses projectId)
+        if (_searchInProject && (task.projectId?.isNotEmpty ?? false)) {
           // TODO: Add project name search when project data is available
         }
         
@@ -368,7 +369,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   _performSearch(_searchController.text.trim());
                 }
               },
-              selectedColor: Theme.of(context).primaryColor.withOpacity(0.2),
+              selectedColor: Theme.of(context).primaryColor.withValues(alpha:0.2),
               checkmarkColor: Theme.of(context).primaryColor,
             );
           }).toList(),
@@ -490,7 +491,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   /// Builds individual task card
   /// Creates styled card for search result
-  Widget _buildTaskCard(Task task) {
+  Widget _buildTaskCard(TaskEntity task) {
     final isOverdue = !task.isCompleted && task.dueDate != null && task.dueDate!.isBefore(DateTime.now());
     
     return Card(
@@ -578,7 +579,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       color: isOverdue ? Colors.red : Colors.grey[600],
                     ),
                   ),
-                  if (task.associatedProject?.id != null && task.associatedProject!.id.isNotEmpty) ...[
+                  if (task.projectId?.isNotEmpty ?? false) ...[
                     const SizedBox(width: 16),
                     Icon(
                       Icons.folder,
@@ -587,7 +588,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      'Project: ${task.associatedProject!.id}',
+                      'Project: ${task.projectId}',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
@@ -862,7 +863,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   /// Navigates to task details screen
   /// Opens detailed view for selected task
-  void _navigateToTaskDetails(Task task) {
+  void _navigateToTaskDetails(TaskEntity task) {
     Navigator.push(
       context,
       MaterialPageRoute(

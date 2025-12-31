@@ -1,19 +1,19 @@
 // registration_screen.dart
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:task_management/authentication/authentication_service.dart';
 import 'package:task_management/screens/login_screen.dart';
 
 /// RegistrationScreen handles user registration with email, password, and role selection
-class RegistrationScreen extends StatefulWidget {
+class RegistrationScreen extends ConsumerStatefulWidget {
   const RegistrationScreen({super.key});
 
   @override
-  _RegistrationScreenState createState() => _RegistrationScreenState();
+  ConsumerState<RegistrationScreen> createState() => _RegistrationScreenState();
 }
 
-class _RegistrationScreenState extends State<RegistrationScreen> {
+class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
   // Form key for form validation
   final _formKey = GlobalKey<FormState>();
   
@@ -115,8 +115,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     try {
-      // Get the authentication service
-      final authService = context.read<AuthenticationService>();
+      // Get the authentication service using ref instead of context.read
+      final authService = ref.read(authenticationServiceProvider);
       
       // Attempt to register the user
       await authService.signUp(

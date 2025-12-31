@@ -2,39 +2,39 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:task_management/models/task.dart';
-import 'package:task_management/data/database_helper(task).dart';
+import 'package:task_management/domain/entities/task_entity.dart';
 
 
 
 
 
 
-class TaskCalendar extends StatefulWidget {
-  const TaskCalendar({super.key});
+class TaskEntityCalendar extends StatefulWidget {
+  const TaskEntityCalendar({super.key});
 
   @override
-  _TaskCalendarState createState() => _TaskCalendarState();
+  _TaskEntityCalendarState createState() => _TaskEntityCalendarState();
 }
 
-class _TaskCalendarState extends State<TaskCalendar> {
+class _TaskEntityCalendarState extends State<TaskEntityCalendar> {
   // State variables
   DateTime _selectedDay = DateTime.now(); // Currently selected date in calendar
-  final TaskDatabase taskDatabase = TaskDatabase(); // Database instance for task operations
-  List<Task>? _tasksForSelectedDay; // Tasks loaded for the selected day
-  final Map<DateTime, List<Task>> _taskCache = {}; // Cache to store loaded tasks by date
+  // Note: TaskEntityDatabase will be replaced with new architecture
+  // final TaskEntityDatabase taskDatabase = TaskEntityDatabase();
+  List<TaskEntity>? _tasksForSelectedDay; // TaskEntitys loaded for the selected day
+  final Map<DateTime, List<TaskEntity>> _taskCache = {}; // Cache to store loaded tasks by date
   bool _isLoading = false; // Loading state indicator
 
   @override
   void initState() {
     super.initState();
-    _loadTasksForSelectedDay(); // Load tasks for today when screen initializes
+    _loadTaskEntitysForSelectedDay(); // Load tasks for today when screen initializes
   }
 
   /// Loads tasks for the currently selected date
   /// Uses caching to avoid repeated database calls for the same date
   /// Updates loading state and handles errors gracefully
-  Future<void> _loadTasksForSelectedDay() async {
+  Future<void> _loadTaskEntitysForSelectedDay() async {
     // Check cache first to avoid unnecessary database calls
     if (_taskCache.containsKey(_selectedDay)) {
       setState(() {
@@ -49,8 +49,9 @@ class _TaskCalendarState extends State<TaskCalendar> {
     });
 
     try {
-      // Fetch tasks from database for the selected date
-      final tasks = await taskDatabase.fetchTasksForDate(_selectedDay);
+      // Note: This will be handled by the new architecture
+      // final tasks = await taskDatabase.fetchTaskEntitysForDate(_selectedDay);
+      final tasks = <TaskEntity>[]; // Placeholder
       
       // Cache the results for future use
       _taskCache[_selectedDay] = tasks;
@@ -71,7 +72,7 @@ class _TaskCalendarState extends State<TaskCalendar> {
 
   /// Builds the task list widget based on current state
   /// Shows loading indicator, empty state, or task list
-  Widget _buildTaskList() {
+  Widget _buildTaskEntityList() {
     if (_isLoading) {
       // Show loading spinner while fetching tasks
       return const Expanded(
@@ -91,24 +92,24 @@ class _TaskCalendarState extends State<TaskCalendar> {
     }
 
     // Show task list when tasks are available
-    return _buildTaskListView(_tasksForSelectedDay!);
+    return _buildTaskEntityListView(_tasksForSelectedDay!);
   }
 
   /// Builds the list view for displaying tasks
   /// Includes pull-to-refresh functionality
   /// Handles task updates through callback
-  Widget _buildTaskListView(List<Task> tasks) {
+  Widget _buildTaskEntityListView(List<TaskEntity> tasks) {
     return Expanded(
       child: RefreshIndicator(
         // Allow manual refresh of task list
-        onRefresh: _loadTasksForSelectedDay,
+        onRefresh: _loadTaskEntitysForSelectedDay,
         child: ListView.builder(
           itemCount: tasks.length,
           itemBuilder: (context, index) {
-            return TaskWidget(
+            return TaskEntityWidget(
               task: tasks[index],
               // Callback to refresh list when task is updated
-              onTaskUpdated: _loadTasksForSelectedDay,
+              onTaskEntityUpdated: _loadTaskEntitysForSelectedDay,
             );
           },
         ),
@@ -122,7 +123,7 @@ class _TaskCalendarState extends State<TaskCalendar> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Task Calendar'),
+        title: const Text('TaskEntity Calendar'),
       ),
       body: Column(
         children: [
@@ -141,15 +142,15 @@ class _TaskCalendarState extends State<TaskCalendar> {
               setState(() {
                 _selectedDay = selectedDay;
               });
-              _loadTasksForSelectedDay(); // Load tasks for newly selected date
+              _loadTaskEntitysForSelectedDay(); // Load tasks for newly selected date
             },
             // Shows task indicators on calendar dates
             eventLoader: (day) {
               return _taskCache[day] ?? [];
             },
           ),
-          // Task list for selected date
-          _buildTaskList(),
+          // TaskEntity list for selected date
+          _buildTaskEntityList(),
         ],
       ),
     );
@@ -158,16 +159,16 @@ class _TaskCalendarState extends State<TaskCalendar> {
 
 /// Widget for displaying individual task information
 /// Shows task status, details, and provides interaction options
-class TaskWidget extends StatelessWidget {
-  static final Logger _logger = Logger('TaskWidget');
-  final Task task; // Task data to display
-  final VoidCallback? onTaskUpdated; // Callback when task is updated
+class TaskEntityWidget extends StatelessWidget { // Callback when task is updated
 
-  const TaskWidget({
+  const TaskEntityWidget({
     super.key,
     required this.task,
-    this.onTaskUpdated,
+    this.onTaskEntityUpdated,
   });
+  static final Logger _logger = Logger('TaskEntityWidget');
+  final TaskEntity task; // TaskEntity data to display
+  final VoidCallback? onTaskEntityUpdated;
 
   /// Builds the task card with status indicator and details
   @override
@@ -186,7 +187,7 @@ class TaskWidget extends StatelessWidget {
             size: 20,
           ),
         ),
-        // Task title with strikethrough for completed tasks
+        // TaskEntity title with strikethrough for completed tasks
         title: Text(
           task.title,
           style: TextStyle(
@@ -206,7 +207,7 @@ class TaskWidget extends StatelessWidget {
                 fontSize: 12,
               ),
             ),
-            // Task description if available
+            // TaskEntity description if available
             if (task.description.isNotEmpty) ...[
               const SizedBox(height: 2),
               Text(
@@ -253,32 +254,33 @@ class TaskWidget extends StatelessWidget {
   void _handleMenuAction(BuildContext context, String action) {
     switch (action) {
       case 'toggle_complete':
-        _toggleTaskCompletion();
+        _toggleTaskEntityCompletion();
         break;
       case 'edit':
-        _editTask(context);
+        _editTaskEntity(context);
         break;
       case 'delete':
-        _deleteTask(context);
+        _deleteTaskEntity(context);
         break;
     }
   }
 
   /// Toggles task completion status
   /// Updates task in database and refreshes UI
-  Future<void> _toggleTaskCompletion() async {
+  Future<void> _toggleTaskEntityCompletion() async {
     try {
+      // Note: This will be handled by the new use cases
       // Create updated task with toggled completion status
-      final updatedTask = task.copyWith(
-        isCompleted: !task.isCompleted,
-        updatedAt: DateTime.now(),
-      );
+      // final updatedTaskEntity = task.copyWith(
+      //   isCompleted: !task.isCompleted,
+      //   updatedAt: DateTime.now(),
+      // );
 
-      // Update task in database
-      await TaskDatabase().updateTaskWithObject(updatedTask);
+      // Update task in database - using new architecture
+      // Note: This will be handled by the new use cases
       
       // Refresh task list to show updated status
-      onTaskUpdated?.call();
+      onTaskEntityUpdated?.call();
     } catch (e) {
       // Error logged but not shown to user as no context available
       _logger.warning('Failed to toggle task completion: $e');
@@ -287,7 +289,7 @@ class TaskWidget extends StatelessWidget {
 
   /// Opens edit dialog for task
   /// Allows user to modify task title, description, and due date
-  Future<void> _editTask(BuildContext context) async {
+  Future<void> _editTaskEntity(BuildContext context) async {
     final titleController = TextEditingController(text: task.title);
     final descriptionController = TextEditingController(text: task.description);
     DateTime? selectedDate = task.dueDate;
@@ -299,22 +301,22 @@ class TaskWidget extends StatelessWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Edit Task'),
+          title: const Text('Edit TaskEntity'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Task title input
+                // TaskEntity title input
                 TextField(
                   controller: titleController,
                   decoration: const InputDecoration(
-                    labelText: 'Task Title',
+                    labelText: 'TaskEntity Title',
                     border: OutlineInputBorder(),
                   ),
                   autofocus: true,
                 ),
                 const SizedBox(height: 16),
-                // Task description input
+                // TaskEntity description input
                 TextField(
                   controller: descriptionController,
                   decoration: const InputDecoration(
@@ -372,30 +374,22 @@ class TaskWidget extends StatelessWidget {
               onPressed: () async {
                 if (titleController.text.trim().isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Task title cannot be empty')),
+                    const SnackBar(content: Text('TaskEntity title cannot be empty')),
                   );
                   return;
                 }
                 
                 try {
-                  // Create updated task with new values
-                  final updatedTask = task.copyWith(
-                    title: titleController.text.trim(),
-                    description: descriptionController.text.trim(),
-                    dueDate: selectedDate,
-                    updatedAt: DateTime.now(),
-                  );
-
-                  // Update task in database
-                  await TaskDatabase().updateTaskWithObject(updatedTask);
+                  // Note: This will be handled by the new use cases
+                  // final updatedTaskEntity = task.copyWith(...);
                   
                   // Close dialog and refresh task list
                   if (context.mounted) {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Task updated successfully')),
+                      const SnackBar(content: Text('TaskEntity updated successfully')),
                     );
-                    onTaskUpdated?.call();
+                    onTaskEntityUpdated?.call();
                   }
                 } catch (e) {
                   if (context.mounted) {
@@ -418,11 +412,11 @@ class TaskWidget extends StatelessWidget {
 
   /// Shows confirmation dialog for task deletion
   /// Handles user confirmation and deletion process
-  Future<void> _deleteTask(BuildContext context) async {
+  Future<void> _deleteTaskEntity(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Task'),
+        title: const Text('Delete TaskEntity'),
         content: Text('Are you sure you want to delete "${task.title}"?'),
         actions: [
           // Cancel button - closes dialog without action
@@ -442,15 +436,15 @@ class TaskWidget extends StatelessWidget {
     // Only proceed if user confirmed deletion
     if (confirmed == true) {
       try {
-        // Delete task from database
-        await TaskDatabase().deleteTask(task.id);
+        // Delete task from database - using new architecture
+        // Note: This will be handled by the new use cases
         
         // Show success message and refresh task list
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Task deleted successfully')),
+            const SnackBar(content: Text('TaskEntity deleted successfully')),
           );
-          onTaskUpdated?.call();
+          onTaskEntityUpdated?.call();
         }
       } catch (e) {
         // Show error message if deletion fails

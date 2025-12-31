@@ -1,16 +1,23 @@
 import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'user.dart';
 
+// Add this provider definition
+final authenticationServiceProvider = Provider<AuthenticationService>((ref) {
+  return AuthenticationService();
+});
 class AuthException implements Exception {
-  final String message;
-  final String code;
 
   AuthException(this.message, {this.code = 'unknown'});
+  final String message;
+  final String code;
 
   @override
   String toString() => 'AuthException: $message';
@@ -33,6 +40,10 @@ class AuthWrongCredentialsException extends AuthException {
 }
 
 class AuthenticationService extends ChangeNotifier {
+
+  AuthenticationService() {
+    init();
+  }
   static final Logger _logger = Logger('AuthenticationService');
   final FirebaseAuth _auth = FirebaseAuth.instance;
   late SharedPreferences prefs;
@@ -85,7 +96,7 @@ class AuthenticationService extends ChangeNotifier {
           final userDoc = await _userCollection.doc(user.uid).get();
           if (userDoc.exists) {
             final userData = userDoc.data();
-            userRole = userData?['role'] ?? 'regular';
+            userRole = userData?['role']?.toString() ?? 'regular';
             // Update SharedPreferences with the role from Firestore
             await prefs.setString('userRole', userRole);
           } else {
@@ -125,10 +136,6 @@ class AuthenticationService extends ChangeNotifier {
     return prefs.getString('userRole') == 'admin';
   }
 
-  AuthenticationService() {
-    init();
-  }
-
   Future<void> init() async {
     if (_isInitialized) return;
     try {
@@ -156,6 +163,10 @@ class AuthenticationService extends ChangeNotifier {
       
       _validateSignInInput(name, email, password);
 
+      if (isRoleSelected) {
+        await _validateUserRole(name, email);
+      }
+
       _logger.fine('Attempting to sign in user: $email');
       
       try {
@@ -167,11 +178,6 @@ class AuthenticationService extends ChangeNotifier {
         if (userCredential.user == null) {
           _logger.warning('Authentication failed: No user returned');
           throw AuthException('Authentication failed');
-        }
-
-        // Validate user role from Firestore AFTER authentication
-        if (isRoleSelected) {
-          await _validateUserRole(name, email);
         }
 
         final customUser = CustomUser(
@@ -278,7 +284,7 @@ class AuthenticationService extends ChangeNotifier {
 
       if (userSnapshot.exists) {
         final List<dynamic> assignedProjects =
-            userSnapshot.data()?['assignedProjects'] ?? [];
+            (userSnapshot.data()?['assignedProjects'] as List<dynamic>?) ?? [];
         return assignedProjects.cast<String>();
       } else {
         return [];
@@ -341,17 +347,14 @@ class AuthenticationService extends ChangeNotifier {
       final userData = query.docs.first.data();
       final storedRole = userData['role'] as String?;
       
-      // Update selected role to match stored role for existing users
-      if (storedRole != null && storedRole.isNotEmpty) {
-        selectedRole = storedRole;
-        await prefs.setString('userRole', storedRole);
-        _logger.info('User role updated from database: $storedRole');
+      if (storedRole != selectedRole) {
+        throw AuthValidationException('Role mismatch for user');
       }
     } catch (e) {
       if (e is AuthException) {
         rethrow;
       }
-      throw AuthValidationException('Failed to validate user role: ${e.toString()}');
+      throw AuthNetworkException('Failed to validate user role');
     }
   }
 }

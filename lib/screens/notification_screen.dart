@@ -4,9 +4,7 @@
 library;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:task_management/models/task.dart';
-import 'package:task_management/data/database_helper(task).dart';
-import 'task_details_screen.dart';
+import 'package:task_management/domain/entities/task_entity.dart';
 
 /// Enum for notification types
 /// Classifies different notification categories
@@ -20,13 +18,6 @@ enum NotificationType {
 
 /// Model class for notification data
 class NotificationItem {
-  final String id;
-  final String title;
-  final String message;
-  final NotificationType type;
-  final DateTime timestamp;
-  final bool isRead;
-  final Task? relatedTask;
 
   NotificationItem({
     required this.id,
@@ -35,55 +26,62 @@ class NotificationItem {
     required this.type,
     required this.timestamp,
     this.isRead = false,
-    this.relatedTask,
+    this.relatedTaskEntity,
   });
 
   /// Creates a notification from a task
-  factory NotificationItem.fromTask(Task task) {
+  factory NotificationItem.fromTaskEntity(TaskEntity task) {
     final now = DateTime.now();
     
     if (task.isCompleted) {
       return NotificationItem(
         id: 'completed_${task.id}',
-        title: 'Task Completed',
+        title: 'TaskEntity Completed',
         message: 'You have completed "${task.title}"',
         type: NotificationType.taskCompleted,
         timestamp: task.updatedAt ?? now,
         isRead: false,
-        relatedTask: task,
+        relatedTaskEntity: task,
       );
     } else if (task.dueDate != null && task.dueDate!.isBefore(now)) {
       return NotificationItem(
         id: 'overdue_${task.id}',
-        title: 'Task Overdue',
+        title: 'TaskEntity Overdue',
         message: '"${task.title}" is overdue by ${now.difference(task.dueDate!).inDays} days',
         type: NotificationType.taskOverdue,
         timestamp: now,
         isRead: false,
-        relatedTask: task,
+        relatedTaskEntity: task,
       );
     } else if (task.dueDate != null && task.dueDate!.difference(now).inDays <= 1) {
       return NotificationItem(
         id: 'due_${task.id}',
-        title: 'Task Due Soon',
+        title: 'TaskEntity Due Soon',
         message: '"${task.title}" is due ${DateFormat.jm().format(task.dueDate!)} today',
         type: NotificationType.taskDue,
         timestamp: now,
         isRead: false,
-        relatedTask: task,
+        relatedTaskEntity: task,
       );
     } else {
       return NotificationItem(
         id: 'updated_${task.id}',
-        title: 'Task Updated',
+        title: 'TaskEntity Updated',
         message: '"${task.title}" has been updated',
         type: NotificationType.taskUpdated,
         timestamp: task.updatedAt ?? now,
         isRead: false,
-        relatedTask: task,
+        relatedTaskEntity: task,
       );
     }
   }
+  final String id;
+  final String title;
+  final String message;
+  final NotificationType type;
+  final DateTime timestamp;
+  final bool isRead;
+  final TaskEntity? relatedTaskEntity;
 }
 
 class NotificationScreen extends StatefulWidget {
@@ -95,7 +93,8 @@ class NotificationScreen extends StatefulWidget {
 
 class _NotificationScreenState extends State<NotificationScreen> {
   // State management
-  final TaskDatabase _taskDatabase = TaskDatabase();
+  // Note: This will be handled by the new architecture
+  // final TaskEntityDatabase _taskDatabase = TaskEntityDatabase();
   List<NotificationItem> _notifications = [];
   List<NotificationItem> _filteredNotifications = [];
   bool _isLoading = true;
@@ -113,11 +112,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
   /// Converts tasks to notification items and handles errors
   Future<void> _loadNotifications() async {
     try {
-      // Fetch tasks from database
-      List<Task> tasks = await _taskDatabase.fetchTasks();
+      // Note: This will be handled by the new architecture
+      // List<TaskEntity> tasks = await _taskDatabase.fetchTaskEntitys();
+      final tasks = <TaskEntity>[]; // Placeholder
       
       // Convert tasks to notification items
-      final notifications = tasks.map((task) => NotificationItem.fromTask(task)).toList();
+      final notifications = tasks.map((task) => NotificationItem.fromTaskEntity(task)).toList();
       
       // Sort notifications by timestamp (newest first)
       notifications.sort((a, b) => b.timestamp.compareTo(a.timestamp));
@@ -466,8 +466,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   void _handleNotificationTap(NotificationItem notification) {
-    if (notification.relatedTask != null) {
-      _navigateToTaskDetails(notification.relatedTask!);
+    if (notification.relatedTaskEntity != null) {
+      _navigateToTaskEntityDetails(notification.relatedTaskEntity!);
     }
   }
 
@@ -482,23 +482,142 @@ class _NotificationScreenState extends State<NotificationScreen> {
           type: notification.type,
           timestamp: notification.timestamp,
           isRead: true,
-          relatedTask: notification.relatedTask,
+          relatedTaskEntity: notification.relatedTaskEntity,
         );
       }
     });
   }
 
-  void _navigateToTaskDetails(Task task) {
+  void _navigateToTaskEntityDetails(TaskEntity task) {
     Navigator.push(
       context,
+      // Note: This will be handled by the new architecture
       MaterialPageRoute(
-        builder: (context) => TaskDetailsScreen(task: task),
+        builder: (context) => Container(), // Placeholder
       ),
     );
   }
 
   void _showNotificationMenu(NotificationItem notification) {
-    // Implement notification menu
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                Icon(
+                  _getNotificationIcon(notification.type),
+                  color: _getNotificationColor(notification.type),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Notification Options',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            
+            // Notification details
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    notification.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    notification.message,
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _formatTimestamp(notification.timestamp),
+                    style: TextStyle(
+                      color: Colors.grey[500],
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Action buttons
+            if (!notification.isRead)
+              ListTile(
+                leading: const Icon(Icons.mark_email_read, color: Colors.blue),
+                title: const Text('Mark as Read'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _markAsRead(notification);
+                },
+              ),
+            
+            if (notification.relatedTaskEntity != null)
+              ListTile(
+                leading: const Icon(Icons.task, color: Colors.green),
+                title: const Text('View Task'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _navigateToTaskEntityDetails(notification.relatedTaskEntity!);
+                },
+              ),
+            
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text('Delete Notification'),
+              onTap: () {
+                Navigator.pop(context);
+                _deleteNotification(notification);
+              },
+            ),
+            
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _deleteNotification(NotificationItem notification) {
+    setState(() {
+      _notifications.removeWhere((n) => n.id == notification.id);
+      _filteredNotifications.removeWhere((n) => n.id == notification.id);
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Notification deleted'),
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   Color _getNotificationColor(NotificationType type) {
@@ -513,7 +632,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return Colors.purple;
       case NotificationType.taskUpdated:
         return Colors.orange;
-      }
+    }
   }
 
   IconData _getNotificationIcon(NotificationType type) {
@@ -528,7 +647,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return Icons.person;
       case NotificationType.taskUpdated:
         return Icons.update;
-      }
+    }
   }
 
   String _formatTimestamp(DateTime timestamp) {

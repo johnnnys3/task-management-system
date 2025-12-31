@@ -9,14 +9,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:task_management/main.dart';
-import 'package:task_management/service/notification_service.dart';
 
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(TaskManagementApp(
-      notificationService: NotificationService(),
-    ));
+    await tester.pumpWidget(const TaskManagementApp());
 
     // Verify that the app loads without errors
     await tester.pumpAndSettle();

@@ -5,18 +5,16 @@ library;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:task_management/models/task.dart';
-import 'package:task_management/models/task_list_notifier.dart';
-import 'package:provider/provider.dart';
+import 'package:task_management/domain/entities/task_entity.dart';
 
 class TaskDetailsScreen extends StatefulWidget {
-  /// The task to display details for
-  final Task task;
 
   const TaskDetailsScreen({
     super.key,
     required this.task,
   });
+  /// The task to display details for
+  final TaskEntity task;
 
   @override
   _TaskDetailsScreenState createState() => _TaskDetailsScreenState();
@@ -151,7 +149,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           _buildAssignmentCard(),
           const SizedBox(height: 16),
           // Project card
-          if (widget.task.associatedProject != null) _buildProjectCard(),
+          if (widget.task.projectId != null) _buildProjectCard(),
           const SizedBox(height: 16),
           // Attachments card
           _buildAttachmentsCard(),
@@ -201,7 +199,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   /// Shows loading indicator during operations
   Widget _buildLoadingOverlay() {
     return Container(
-      color: Colors.black.withOpacity(0.5),
+      color: Colors.black.withValues(alpha:0.5),
       child: const Center(
         child: Card(
           child: Padding(
@@ -402,7 +400,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   /// Builds project card
   /// Shows associated project information
   Widget _buildProjectCard() {
-    final project = widget.task.associatedProject!;
+    final projectId = widget.task.projectId;
     
     return Card(
       elevation: 3,
@@ -433,7 +431,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    project.name,
+                    projectId ?? 'No Project',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
@@ -442,38 +440,15 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 ),
               ],
             ),
-            // Project description
-            if (project.description.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                project.description,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[700],
-                ),
-              ),
-            ],
-            // Project due date
-            ...[
+            // Project ID info
             const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(
-                  Icons.event,
-                  color: Colors.grey[600],
-                  size: 16,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  'Project due: ${_formatDate(project.dueDate)}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
+            Text(
+              'Project ID: $projectId',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
             ),
-          ],
           ],
         ),
       ),
@@ -670,24 +645,16 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       });
 
       // Update task completion
-      final updatedTask = Task(
-        id: widget.task.id,
-        title: widget.task.title,
-        description: widget.task.description,
-        dueDate: widget.task.dueDate,
-        assignedMembers: widget.task.assignedMembers,
-        associatedProject: widget.task.associatedProject,
-        attachments: widget.task.attachments,
-        isCompleted: !widget.task.isCompleted,
-        priority: widget.task.priority,
-        createdAt: widget.task.createdAt,
-      );
+      // Note: This will be handled by the new architecture
 
-      // Update in Firestore
-      await _tasksCollection.doc(widget.task.id).update(updatedTask.toMap());
+      // Update in Firestore - using new architecture
+      // Note: This will be handled by the new use cases
+      await _tasksCollection.doc(widget.task.id).update({
+        'isCompleted': !widget.task.isCompleted,
+      });
 
-      // Update local state
-      Provider.of<TaskListNotifier>(context, listen: false).updateTask(updatedTask);
+      // Update local state using new architecture
+      // Note: This will be handled by the new providers
 
       setState(() {
         _isLoading = false;
@@ -747,8 +714,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         // Delete from Firestore
         await _tasksCollection.doc(widget.task.id).delete();
 
-        // Update local state
-        Provider.of<TaskListNotifier>(context, listen: false).deleteTask(widget.task.id);
+        // Update local state using new architecture
+        // Note: This will be handled by the new providers
 
         setState(() {
           _isLoading = false;

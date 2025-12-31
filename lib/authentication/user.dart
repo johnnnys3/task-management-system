@@ -3,6 +3,53 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Represents a user in the task management system
 class CustomUser {
+
+  const CustomUser({
+    required this.uid,
+    required this.email,
+    required this.name,
+    required this.role,
+    required this.assignedProjects,
+    this.createdAt,
+    this.updatedAt,
+    this.isActive = true,
+  });
+
+  /// Creates a CustomUser from a Firestore document
+  factory CustomUser.fromFirestore(Map<String, dynamic> data, String uid) {
+    return CustomUser(
+      uid: uid,
+      email: data['email'] as String? ?? '',
+      name: data['name'] as String? ?? '',
+      role: data['role'] as String? ?? 'regular',
+      assignedProjects: List<String>.from(data['assignedProjects'] as List? ?? []),
+      createdAt: data['createdAt'] != null 
+          ? (data['createdAt'] as Timestamp).toDate() 
+          : null,
+      updatedAt: data['updatedAt'] != null 
+          ? (data['updatedAt'] as Timestamp).toDate() 
+          : null,
+      isActive: data['isActive'] as bool? ?? true,
+    );
+  }
+
+  /// Creates a CustomUser from JSON
+  factory CustomUser.fromJson(Map<String, dynamic> json) {
+    return CustomUser(
+      uid: json['uid'] as String,
+      email: json['email'] as String,
+      name: json['name'] as String,
+      role: json['role'] as String,
+      assignedProjects: List<String>.from(json['assignedProjects'] as List? ?? []),
+      createdAt: json['createdAt'] != null 
+          ? DateTime.parse(json['createdAt'] as String) 
+          : null,
+      updatedAt: json['updatedAt'] != null 
+          ? DateTime.parse(json['updatedAt'] as String) 
+          : null,
+      isActive: json['isActive'] as bool? ?? true,
+    );
+  }
   /// Unique identifier for the user
   final String uid;
   
@@ -27,17 +74,6 @@ class CustomUser {
   /// Whether the user account is active
   final bool isActive;
 
-  const CustomUser({
-    required this.uid,
-    required this.email,
-    required this.name,
-    required this.role,
-    required this.assignedProjects,
-    this.createdAt,
-    this.updatedAt,
-    this.isActive = true,
-  });
-
   /// Creates a copy of this user with updated fields
   CustomUser copyWith({
     String? uid,
@@ -61,24 +97,6 @@ class CustomUser {
     );
   }
 
-  /// Creates a CustomUser from a Firestore document
-  factory CustomUser.fromFirestore(Map<String, dynamic> data, String uid) {
-    return CustomUser(
-      uid: uid,
-      email: data['email'] as String? ?? '',
-      name: data['name'] as String? ?? '',
-      role: data['role'] as String? ?? 'regular',
-      assignedProjects: List<String>.from(data['assignedProjects'] ?? []),
-      createdAt: data['createdAt'] != null 
-          ? (data['createdAt'] as Timestamp).toDate() 
-          : null,
-      updatedAt: data['updatedAt'] != null 
-          ? (data['updatedAt'] as Timestamp).toDate() 
-          : null,
-      isActive: data['isActive'] as bool? ?? true,
-    );
-  }
-
   /// Converts the user to a Firestore document
   Map<String, dynamic> toFirestore() {
     return {
@@ -91,24 +109,6 @@ class CustomUser {
       'updatedAt': updatedAt,
       'isActive': isActive,
     };
-  }
-
-  /// Creates a CustomUser from JSON
-  factory CustomUser.fromJson(Map<String, dynamic> json) {
-    return CustomUser(
-      uid: json['uid'] as String,
-      email: json['email'] as String,
-      name: json['name'] as String,
-      role: json['role'] as String,
-      assignedProjects: List<String>.from(json['assignedProjects'] ?? []),
-      createdAt: json['createdAt'] != null 
-          ? DateTime.parse(json['createdAt'] as String) 
-          : null,
-      updatedAt: json['updatedAt'] != null 
-          ? DateTime.parse(json['updatedAt'] as String) 
-          : null,
-      isActive: json['isActive'] as bool? ?? true,
-    );
   }
 
   /// Converts the user to JSON

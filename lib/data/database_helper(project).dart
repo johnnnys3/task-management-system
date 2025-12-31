@@ -1,27 +1,31 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:logging/logging.dart';
-import 'package:task_management/models/project.dart';
+import 'package:task_management/domain/entities/project_entity.dart';
 
 /// Custom exceptions for project database operations
 class ProjectDatabaseException implements Exception {
+  ProjectDatabaseException(
+    this.message, {
+    this.code = 'unknown',
+    this.originalError,
+  });
+
   final String message;
   final String code;
   final dynamic originalError;
-
-  ProjectDatabaseException(this.message, {this.code = 'unknown', this.originalError});
 
   @override
   String toString() => 'ProjectDatabaseException: $message';
 }
 
 class ProjectNotFoundException extends ProjectDatabaseException {
-  ProjectNotFoundException(String projectId) 
+  ProjectNotFoundException(String projectId)
       : super('Project not found: $projectId', code: 'project-not-found');
 }
 
 class ProjectValidationException extends ProjectDatabaseException {
-  ProjectValidationException(super.message) 
-      : super(code: 'validation-error');
+  ProjectValidationException(String message)
+      : super(message, code: 'validation-error');
 }
 
 /// Handles all database operations for projects
@@ -30,83 +34,59 @@ class ProjectDatabase {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final String _collectionName = 'projects';
 
-  /// Collection reference for projects
-  CollectionReference<Map<String, dynamic>> get _collection => 
+  CollectionReference<Map<String, dynamic>> get _collection =>
       _firestore.collection(_collectionName);
 
-  /// Adds a new project to the database
-  /// 
-  /// Throws [ProjectValidationException] if project data is invalid
-  /// Throws [ProjectDatabaseException] for database errors
-  Future<String> addProject(Project project) async {
+  /// Add project
+  Future<String> addProject(ProjectEntity project) async {
     try {
       _validateProject(project);
-      
+
       final docRef = await _collection.add({
         ...project.toMap(),
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
-      
-      _logger.info('Project added successfully: ${docRef.id}');
+
+      _logger.info('Project added: ${docRef.id}');
       return docRef.id;
     } on FirebaseException catch (e) {
-      _logger.severe('Firebase error adding project', e);
       throw ProjectDatabaseException(
         'Failed to add project: ${e.message}',
         code: e.code,
         originalError: e,
       );
-    } catch (e, stackTrace) {
-      _logger.severe('Unexpected error adding project', e, stackTrace);
-      throw ProjectDatabaseException(
-        'Unexpected error adding project',
-        originalError: e,
-      );
     }
   }
 
-  /// Updates an existing project
-  /// 
-  /// Throws [ProjectNotFoundException] if project doesn't exist
-  /// Throws [ProjectValidationException] if project data is invalid
-  Future<void> updateProject(Project project) async {
+  /// Update project
+  Future<void> updateProject(ProjectEntity project) async {
     if (project.id.isEmpty) {
-      throw ProjectValidationException('Project ID is required for update');
+      throw ProjectValidationException('Project ID is required');
     }
 
     try {
       _validateProject(project);
-      
+
       await _collection.doc(project.id).update({
         ...project.toMap(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
-      
-      _logger.info('Project updated successfully: ${project.id}');
+
+      _logger.info('Project updated: ${project.id}');
     } on FirebaseException catch (e) {
       if (e.code == 'not-found') {
-        _logger.warning('Project not found for update: ${project.id}');
         throw ProjectNotFoundException(project.id);
       }
-      _logger.severe('Firebase error updating project', e);
       throw ProjectDatabaseException(
         'Failed to update project: ${e.message}',
         code: e.code,
         originalError: e,
       );
-    } catch (e, stackTrace) {
-      _logger.severe('Unexpected error updating project', e, stackTrace);
-      throw ProjectDatabaseException(
-        'Unexpected error updating project',
-        originalError: e,
-      );
     }
   }
 
-  /// Deletes a project by ID
-  /// 
-  /// Throws [ProjectNotFoundException] if project doesn't exist
+  /// Delete project
   Future<void> deleteProject(String projectId) async {
     if (projectId.isEmpty) {
       throw ProjectValidationException('Project ID is required');
@@ -114,219 +94,120 @@ class ProjectDatabase {
 
     try {
       await _collection.doc(projectId).delete();
-      _logger.info('Project deleted successfully: $projectId');
+      _logger.info('Project deleted: $projectId');
     } on FirebaseException catch (e) {
       if (e.code == 'not-found') {
-        _logger.warning('Project not found for deletion: $projectId');
         throw ProjectNotFoundException(projectId);
       }
-      _logger.severe('Firebase error deleting project', e);
       throw ProjectDatabaseException(
         'Failed to delete project: ${e.message}',
         code: e.code,
         originalError: e,
       );
-    } catch (e, stackTrace) {
-      _logger.severe('Unexpected error deleting project', e, stackTrace);
-      throw ProjectDatabaseException(
-        'Unexpected error deleting project',
-        originalError: e,
-      );
     }
   }
 
-  /// Fetches a project by ID
-  /// 
-  /// Throws [ProjectNotFoundException] if project doesn't exist
-  Future<Project?> getProject(String projectId) async {
+  /// Get project by ID
+  Future<ProjectEntity> getProject(String projectId) async {
     if (projectId.isEmpty) {
       throw ProjectValidationException('Project ID is required');
     }
 
-    try {
-      final docSnapshot = await _collection.doc(projectId).get();
-      if (!docSnapshot.exists) {
-        throw ProjectNotFoundException(projectId);
-      }
-      
-      final data = docSnapshot.data()!;
-      data['id'] = docSnapshot.id;
-      
-      return Project.fromMap(data, docSnapshot.id);
-    } on FirebaseException catch (e) {
-      _logger.severe('Firebase error fetching project', e);
-      throw ProjectDatabaseException(
-        'Failed to fetch project: ${e.message}',
-        code: e.code,
-        originalError: e,
-      );
-    } catch (e, stackTrace) {
-      _logger.severe('Unexpected error fetching project', e, stackTrace);
-      throw ProjectDatabaseException(
-        'Unexpected error fetching project',
-        originalError: e,
-      );
+    final doc = await _collection.doc(projectId).get();
+    if (!doc.exists) {
+      throw ProjectNotFoundException(projectId);
     }
+
+    return ProjectEntity.fromMap(doc.data()!, doc.id);
   }
 
-  /// Fetches all projects
-  Future<List<Project>> getAllProjects() async {
-    try {
-      final querySnapshot = await _collection.get();
-      return querySnapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = doc.id;
-        return Project.fromMap(data, doc.id);
-      }).toList();
-    } on FirebaseException catch (e) {
-      _logger.severe('Firebase error fetching all projects', e);
-      throw ProjectDatabaseException(
-        'Failed to fetch projects: ${e.message}',
-        code: e.code,
-        originalError: e,
-      );
-    } catch (e, stackTrace) {
-      _logger.severe('Unexpected error fetching all projects', e, stackTrace);
-      throw ProjectDatabaseException(
-        'Unexpected error fetching projects',
-        originalError: e,
-      );
-    }
+  /// Get all projects
+  Future<List<ProjectEntity>> getAllProjects() async {
+    final snapshot = await _collection.get();
+    return snapshot.docs
+        .map((doc) => ProjectEntity.fromMap(doc.data(), doc.id))
+        .toList();
   }
 
-  /// Fetches projects for a specific user
-  Future<List<Project>> getProjectsForUser(String userId) async {
+  /// Get projects for user
+  Future<List<ProjectEntity>> getProjectsForUser(String userId) async {
     if (userId.isEmpty) {
       throw ProjectValidationException('User ID is required');
     }
 
-    try {
-      final querySnapshot = await _collection
-          .where('assignedUsers', arrayContains: userId)
-          .orderBy('createdAt', descending: true)
-          .get();
-      
-      return querySnapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = doc.id;
-        return Project.fromMap(data, doc.id);
-      }).toList();
-    } on FirebaseException catch (e) {
-      _logger.severe('Firebase error fetching user projects', e);
-      throw ProjectDatabaseException(
-        'Failed to fetch user projects: ${e.message}',
-        code: e.code,
-        originalError: e,
-      );
-    } catch (e, stackTrace) {
-      _logger.severe('Unexpected error fetching user projects', e, stackTrace);
-      throw ProjectDatabaseException(
-        'Unexpected error fetching user projects',
-        originalError: e,
-      );
-    }
+    final snapshot = await _collection
+        .where('assignedUsers', arrayContains: userId)
+        .orderBy('createdAt', descending: true)
+        .get();
+
+    return snapshot.docs
+        .map((doc) => ProjectEntity.fromMap(doc.data(), doc.id))
+        .toList();
   }
 
-  /// Searches projects by name or description
-  Future<List<Project>> searchProjects(String query) async {
-    if (query.isEmpty) {
-      return getAllProjects();
-    }
+  /// Search projects
+  Future<List<ProjectEntity>> searchProjects(String query) async {
+    if (query.isEmpty) return getAllProjects();
 
-    try {
-      final querySnapshot = await _collection
-          .where('name', isGreaterThanOrEqualTo: query)
-          .where('name', isLessThanOrEqualTo: '$query\uf8ff')
-          .get();
-      
-      return querySnapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = doc.id;
-        return Project.fromMap(data, doc.id);
-      }).toList();
-    } on FirebaseException catch (e) {
-      _logger.severe('Firebase error searching projects', e);
-      throw ProjectDatabaseException(
-        'Failed to search projects: ${e.message}',
-        code: e.code,
-        originalError: e,
-      );
-    } catch (e, stackTrace) {
-      _logger.severe('Unexpected error searching projects', e, stackTrace);
-      throw ProjectDatabaseException(
-        'Unexpected error searching projects',
-        originalError: e,
-      );
-    }
+    final snapshot = await _collection
+        .where('name', isGreaterThanOrEqualTo: query)
+        .where('name', isLessThanOrEqualTo: '$query\uf8ff')
+        .get();
+
+    return snapshot.docs
+        .map((doc) => ProjectEntity.fromMap(doc.data(), doc.id))
+        .toList();
   }
 
-  /// Performs a batch update of multiple projects
-  Future<void> batchUpdateProjects(List<Project> projects) async {
-    if (projects.isEmpty) {
-      return;
-    }
+  /// ✅ FIXED: batch update projects
+  Future<void> batchUpdateProjects(List<ProjectEntity> projects) async {
+    if (projects.isEmpty) return;
 
     final batch = _firestore.batch();
-    try {
-      for (final project in projects) {
-        if (project.id.isEmpty) {
-          throw ProjectValidationException('All projects must have IDs for batch update');
-        }
-        
-        _validateProject(project);
-        
-        final docRef = _collection.doc(project.id);
-        batch.update(docRef, {
+
+    for (final project in projects) {
+      if (project.id.isEmpty) {
+        throw ProjectValidationException('All projects must have IDs');
+      }
+
+      _validateProject(project);
+
+      batch.update(
+        _collection.doc(project.id),
+        {
           ...project.toMap(),
           'updatedAt': FieldValue.serverTimestamp(),
-        });
-      }
-      
-      await batch.commit();
-      _logger.info('Batch update completed for ${projects.length} projects');
-    } on FirebaseException catch (e) {
-      _logger.severe('Firebase error in batch update', e);
-      throw ProjectDatabaseException(
-        'Failed to batch update projects: ${e.message}',
-        code: e.code,
-        originalError: e,
-      );
-    } catch (e, stackTrace) {
-      _logger.severe('Unexpected error in batch update', e, stackTrace);
-      throw ProjectDatabaseException(
-        'Unexpected error in batch update',
-        originalError: e,
+        },
       );
     }
+
+    await batch.commit();
+    _logger.info('Batch updated ${projects.length} projects');
   }
 
-  /// Validates project data before database operations
-  void _validateProject(Project project) {
+  /// Validation
+  void _validateProject(ProjectEntity project) {
     if (project.name.isEmpty) {
       throw ProjectValidationException('Project name is required');
     }
     if (project.name.length > 100) {
-      throw ProjectValidationException('Project name must be less than 100 characters');
+      throw ProjectValidationException('Project name too long');
     }
     if (project.description.length > 500) {
-      throw ProjectValidationException('Project description must be less than 500 characters');
+      throw ProjectValidationException('Project description too long');
     }
   }
 
-  /// Gets a stream of projects for real-time updates
-  Stream<List<Project>> getProjectsStream() {
+  /// Streams
+  Stream<List<ProjectEntity>> getProjectsStream() {
     return _collection
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-          final data = doc.data();
-          data['id'] = doc.id;
-          return Project.fromMap(data, doc.id);
-        }).toList());
+        .map((s) =>
+            s.docs.map((d) => ProjectEntity.fromMap(d.data(), d.id)).toList());
   }
 
-  /// Gets a stream of projects for a specific user
-  Stream<List<Project>> getProjectsForUserStream(String userId) {
+  Stream<List<ProjectEntity>> getProjectsForUserStream(String userId) {
     if (userId.isEmpty) {
       throw ProjectValidationException('User ID is required');
     }
@@ -335,10 +216,7 @@ class ProjectDatabase {
         .where('assignedUsers', arrayContains: userId)
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-          final data = doc.data();
-          data['id'] = doc.id;
-          return Project.fromMap(data, doc.id);
-        }).toList());
+        .map((s) =>
+            s.docs.map((d) => ProjectEntity.fromMap(d.data(), d.id)).toList());
   }
 }

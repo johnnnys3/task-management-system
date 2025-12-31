@@ -3,18 +3,17 @@
 /// Includes real-time data fetching and error handling
 library;
 import 'package:flutter/material.dart';
-import 'package:task_management/models/project.dart';
+import 'package:task_management/domain/entities/project_entity.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:task_management/models/task.dart';
-import 'package:task_management/data/database_helper(task).dart';
+import 'package:task_management/domain/entities/task_entity.dart';
 import 'package:task_management/screens/task_details_screen.dart';
 
 class ProjectDetailsScreen extends StatefulWidget {
-  /// Project to display details for
-  final Project project;
 
   const ProjectDetailsScreen({super.key, required this.project});
+  /// Project to display details for
+  final ProjectEntity project;
 
   @override
   _ProjectDetailsScreenState createState() => _ProjectDetailsScreenState();
@@ -22,9 +21,9 @@ class ProjectDetailsScreen extends StatefulWidget {
 
 class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   // State variables
-  late Project project; // Current project data
+  late ProjectEntity project; // Current project data
   String projectDescription = ''; // Fetched project description
-  List<Task> relatedTasks = []; // Related tasks for the project
+  List<TaskEntity> relatedTasks = []; // Related tasks for the project
   List<String> relatedTaskTitles = []; // Task titles for display
   bool _isLoading = true; // Loading state for data fetching
   String _errorMessage = ''; // Error message for user feedback
@@ -33,7 +32,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   // Controllers for editing
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
-  late TextEditingController _dueDateController;
+  late TextEditingController _endDateController;
 
   @override
   void initState() {
@@ -51,8 +50,10 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   void _initializeControllers() {
     _nameController = TextEditingController(text: project.name);
     _descriptionController = TextEditingController(text: projectDescription);
-    _dueDateController = TextEditingController(
-      text: DateFormat('yyyy-MM-dd').format(project.dueDate)
+    _endDateController = TextEditingController(
+      text: project.endDate != null 
+          ? DateFormat('yyyy-MM-dd').format(project.endDate!)
+          : '',
     );
   }
 
@@ -61,7 +62,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     // Clean up controllers to prevent memory leaks
     _nameController.dispose();
     _descriptionController.dispose();
-    _dueDateController.dispose();
+    _endDateController.dispose();
     super.dispose();
   }
 
@@ -77,17 +78,17 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
         final data = projectSnapshot.data()!;
         if (mounted) {
           setState(() {
-            projectDescription = data['description'] ?? '';
-            // Update project object with fetched data
-            project = Project(
-              id: project.id,
-              name: data['name'] ?? project.name,
-              description: projectDescription,
-              dueDate: (data['dueDate'] as Timestamp?)?.toDate() ?? project.dueDate,
-              tasks: project.tasks,
-              isCompleted: data['isCompleted'] ?? project.isCompleted,
-              createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? project.createdAt,
-            );
+            projectDescription = data['description']?.toString() ?? '';
+            // Note: This will be handled by the new architecture
+            // project = Project(
+            //   id: project.id,
+            //   name: data['name'] ?? project.name,
+            //   description: projectDescription,
+            //   endDate: (data['endDate'] as Timestamp?)?.toDate() ?? project.endDate,
+            //   tasks: project.tasks,
+            //   isCompleted: data['isCompleted'] ?? project.isCompleted,
+            //   createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? project.createdAt,
+            // );
             // Update controllers with fresh data
             _descriptionController.text = projectDescription;
           });
@@ -107,13 +108,16 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   /// Updates task list and handles errors gracefully
   Future<void> _fetchRelatedTasks() async {
     try {
-      // Fetch tasks from local database
-      final fetchedTasks = await TaskDatabase().fetchTasks();
+      // Note: This will be handled by the new architecture
+      // final fetchedTasks = await TaskDatabase().fetchTasks();
+      // final fetchedTasks = <TaskEntity>[]; // Placeholder
       
+      // Note: This will be handled by the new architecture
       // Filter tasks related to this project
-      final projectTasks = fetchedTasks.where((task) => 
-        task.associatedProject?.id == project.id
-      ).toList();
+      // final projectTasks = fetchedTasks.where((task) => 
+      //   task.associatedProject?.id == project.id
+      // ).toList();
+      final projectTasks = <TaskEntity>[]; // Placeholder
       
       if (mounted) {
         setState(() {
@@ -309,7 +313,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
             // Due date
             if (_isEditing)
               TextFormField(
-                controller: _dueDateController,
+                controller: _endDateController,
                 decoration: const InputDecoration(
                   labelText: 'Due Date',
                   border: OutlineInputBorder(),
@@ -328,7 +332,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Due Date: ${_formatDate(project.dueDate)}',
+                    'Due Date: ${project.endDate != null ? _formatDate(project.endDate!) : 'No end date'}',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey[600],
@@ -708,14 +712,14 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   Future<void> _selectDueDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: project.dueDate,
+      initialDate: project.endDate,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
     );
     
     if (picked != null) {
       setState(() {
-        _dueDateController.text = DateFormat('yyyy-MM-dd').format(picked);
+        _endDateController.text = DateFormat('yyyy-MM-dd').format(picked);
       });
     }
   }
@@ -741,24 +745,25 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           .update({
             'name': _nameController.text.trim(),
             'description': _descriptionController.text.trim(),
-            'dueDate': Timestamp.fromDate(
-              DateFormat('yyyy-MM-dd').parse(_dueDateController.text)
+            'endDate': Timestamp.fromDate(
+              DateFormat('yyyy-MM-dd').parse(_endDateController.text)
             ),
             'updatedAt': Timestamp.now(),
           });
       
       // Update local project object
       setState(() {
-        project = Project(
-          id: project.id,
-          name: _nameController.text.trim(),
-          description: _descriptionController.text.trim(),
-          dueDate: DateFormat('yyyy-MM-dd').parse(_dueDateController.text),
-          tasks: project.tasks,
-          isCompleted: project.isCompleted,
-          createdAt: project.createdAt,
-        );
-        projectDescription = _descriptionController.text.trim();
+        // Note: This will be handled by the new architecture
+      // project = Project(
+      //   id: project.id,
+      //   name: _nameController.text.trim(),
+      //   description: _descriptionController.text.trim(),
+      //   endDate: DateFormat('yyyy-MM-dd').parse(_endDateController.text),
+      //   tasks: [], // ProjectEntity doesn't have tasks property
+      //   isCompleted: project.isCompleted,
+      //   createdAt: project.createdAt,
+      // );
+      projectDescription = _descriptionController.text.trim();
         _isEditing = false;
         _isLoading = false;
       });
@@ -833,7 +838,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
 
   /// Navigates to task details screen
   /// Opens task details for selected task
-  void _navigateToTask(Task task) {
+  void _navigateToTask(TaskEntity task) {
     // Import and navigate to task details screen
     Navigator.push(
       context,
@@ -918,7 +923,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         FloatingActionButton(
-          heroTag: "edit",
+          heroTag: 'edit',
           onPressed: () {
             setState(() {
               _isEditing = true;
@@ -929,7 +934,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
         ),
         const SizedBox(height: 8),
         FloatingActionButton(
-          heroTag: "delete",
+          heroTag: 'delete',
           onPressed: () => _showDeleteConfirmation(),
           backgroundColor: Colors.red,
           child: const Icon(Icons.delete, color: Colors.white),

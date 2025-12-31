@@ -3,20 +3,22 @@
 /// Includes team creation, member management, and role assignments
 library;
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:task_management/models/team.dart';
+// Note: Cloud Firestore will be handled by the new architecture
+// import 'package:cloud_firestore/cloud_firestore.dart';
+// Note: Team functionality will be handled by the new architecture
+// import 'package:task_management/models/team.dart';
 
 class TeamManagementScreen extends StatefulWidget {
-  /// Current user ID for team operations
-  final String userId;
-  /// Admin status for permission-based actions
-  final bool isAdmin;
 
   const TeamManagementScreen({
     super.key,
     required this.userId,
     this.isAdmin = false,
   });
+  /// Current user ID for team operations
+  final String userId;
+  /// Admin status for permission-based actions
+  final bool isAdmin;
 
   @override
   _TeamManagementScreenState createState() => _TeamManagementScreenState();
@@ -24,8 +26,11 @@ class TeamManagementScreen extends StatefulWidget {
 
 class _TeamManagementScreenState extends State<TeamManagementScreen> {
   // State variables for team management
-  List<Team> _teams = [];
-  List<Team> _filteredTeams = [];
+  // Note: Team functionality will be handled by the new architecture
+  // List<Team> _teams = [];
+  // List<Team> _filteredTeams = [];
+  List<Map<String, dynamic>> _teams = []; // Placeholder for team data
+  List<Map<String, dynamic>> _filteredTeams = []; // Placeholder for filtered teams
   bool _isLoading = false;
   String _errorMessage = '';
   
@@ -36,8 +41,8 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
   // Filter options
   final List<String> _filterOptions = ['All', 'Active', 'Inactive', 'My Teams'];
   
-  // Firestore references
-  final CollectionReference _teamsCollection = FirebaseFirestore.instance.collection('teams');
+  // Note: Firestore references will be handled by the new architecture
+  // final CollectionReference _teamsCollection = FirebaseFirestore.instance.collection('teams');
 
   @override
   void initState() {
@@ -208,7 +213,7 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
   /// Shows loading indicator during operations
   Widget _buildLoadingOverlay() {
     return Container(
-      color: Colors.black.withOpacity(0.5),
+      color: Colors.black.withValues(alpha:0.5),
       child: const Center(
         child: Card(
           child: Padding(
@@ -230,9 +235,13 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
   /// Builds team statistics
   /// Shows count of teams by status
   Widget _buildTeamStatistics() {
-    final activeCount = _teams.where((team) => team.status == TeamStatus.active).length;
-    final inactiveCount = _teams.where((team) => team.status == TeamStatus.inactive).length;
-    final myTeamsCount = _teams.where((team) => team.members.containsKey(widget.userId)).length;
+    // Note: This will be handled by the new architecture
+    // final activeCount = _teams.where((team) => team.status == TeamStatus.active).length;
+    // final inactiveCount = _teams.where((team) => team.status == TeamStatus.inactive).length;
+    // final myTeamsCount = _teams.where((team) => team.members.containsKey(widget.userId)).length;
+    final activeCount = 0; // Placeholder
+    final inactiveCount = 0; // Placeholder
+    final myTeamsCount = 0; // Placeholder
     
     return Container(
       padding: const EdgeInsets.all(16),
@@ -301,12 +310,13 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
         _errorMessage = '';
       });
       
-      // Fetch teams from Firestore
-      final QuerySnapshot snapshot = await _teamsCollection.get();
-      final List<Team> loadedTeams = snapshot.docs
-          .map((doc) => Team.fromMap(doc.data() as Map<String, dynamic>, doc.id))
-          .toList();
-
+      // Note: This will be handled by the new architecture
+      // final QuerySnapshot snapshot = await _teamsCollection.get();
+      // final List<Team> loadedTeams = snapshot.docs
+      //     .map((doc) => Team.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+      //     .toList();
+      final List<Map<String, dynamic>> loadedTeams = []; // Placeholder
+      
       setState(() {
         _teams = loadedTeams;
         _filteredTeams = loadedTeams;
@@ -335,8 +345,8 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
       _filteredTeams = _teams.where((team) {
         // Apply search filter
         final matchesSearch = _searchController.text.isEmpty ||
-            team.name.toLowerCase().contains(_searchController.text.toLowerCase()) ||
-            team.description.toLowerCase().contains(_searchController.text.toLowerCase());
+            (team['name']?.toString().toLowerCase().contains(_searchController.text.toLowerCase()) ?? false) ||
+            (team['description']?.toString().toLowerCase().contains(_searchController.text.toLowerCase()) ?? false);
         
         // Apply status filter
         final matchesFilter = _matchesFilter(team);
@@ -348,16 +358,16 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
 
   /// Checks if team matches current filter
   /// Returns true if team should be displayed
-  bool _matchesFilter(Team team) {
+  bool _matchesFilter(Map<String, dynamic> team) {
     switch (_selectedFilter) {
       case 'Active':
-        return team.status == TeamStatus.active;
+        return team['status']?.toString() == 'active';
       case 'Inactive':
-        return team.status == TeamStatus.inactive;
+        return team['status']?.toString() == 'inactive';
       case 'My Teams':
-        return team.members.containsKey(widget.userId);
+        return team['members']?.toString().contains(widget.userId) ?? false;
       default:
-        return true; // 'All' filter
+        return true;
     }
   }
 
@@ -370,27 +380,27 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
 
   /// Navigates to team details screen
   /// Opens team details for viewing and editing
-  void _navigateToTeamDetails(Team team) {
+  void _navigateToTeamDetails(Map<String, dynamic> team) {
     // TODO: Navigate to team details screen
     _showSuccessSnackBar('Team details not implemented yet');
   }
 
   /// Navigates to team update screen
   /// Opens team update for modification
-  void _navigateToUpdateTeam(Team team) {
+  void _navigateToUpdateTeam(Map<String, dynamic> team) {
     // TODO: Navigate to team update screen
     _showSuccessSnackBar('Team update not implemented yet');
   }
 
   /// Deletes team from database
   /// Shows confirmation dialog and updates list
-  Future<void> _deleteTeam(Team team) async {
+  Future<void> _deleteTeam(Map<String, dynamic> team) async {
     // Show confirmation dialog
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Team'),
-        content: Text('Are you sure you want to delete "${team.name}"?'),
+        content: Text('Are you sure you want to delete "${team['name']?.toString() ?? 'team'}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -411,10 +421,10 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
           _errorMessage = '';
         });
         
-        // Delete from Firestore
-        await _teamsCollection.doc(team.id).delete();
-        await _loadTeams();
-        _showSuccessSnackBar('Team deleted successfully');
+        // Note: This will be handled by the new architecture
+        // await _teamsCollection.doc(team.id).delete();
+        // await _loadTeams();
+        _showSuccessSnackBar('Team deletion not implemented yet');
       } catch (e) {
         setState(() {
           _isLoading = false;
@@ -512,16 +522,6 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
 /// Provides team card with interactive features
 /// Includes status indicators, member count, and action buttons
 class TeamListItem extends StatelessWidget {
-  /// Team to display
-  final Team team;
-  /// Callback for team tap
-  final VoidCallback onTap;
-  /// Callback for team update
-  final VoidCallback? onUpdateTeam;
-  /// Callback for team delete
-  final VoidCallback? onDeleteTeam;
-  /// Whether current user is team member
-  final bool isMember;
 
   const TeamListItem({
     super.key,
@@ -531,6 +531,16 @@ class TeamListItem extends StatelessWidget {
     this.onDeleteTeam,
     this.isMember = false,
   });
+  /// Team to display
+  final Map<String, dynamic> team;
+  /// Callback for team tap
+  final VoidCallback onTap;
+  /// Callback for team update
+  final VoidCallback? onUpdateTeam;
+  /// Callback for team delete
+  final VoidCallback? onDeleteTeam;
+  /// Whether current user is team member
+  final bool isMember;
 
   @override
   Widget build(BuildContext context) {
@@ -553,7 +563,7 @@ class TeamListItem extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      team.name,
+                      team['name']?.toString() ?? 'Team',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -569,11 +579,11 @@ class TeamListItem extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: team.status == TeamStatus.active ? Colors.green : Colors.grey,
+                      color: team['status']?.toString() == 'active' ? Colors.green : Colors.grey,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      team.status == TeamStatus.active ? 'Active' : 'Inactive',
+                      team['status']?.toString() == 'active' ? 'Active' : 'Inactive',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10,
@@ -585,9 +595,9 @@ class TeamListItem extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               // Description
-              if (team.description.isNotEmpty)
+              if ((team['description']?.toString().isNotEmpty ?? false))
                 Text(
-                  team.description,
+                  team['description']?.toString() ?? '',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey[600],
@@ -610,7 +620,7 @@ class TeamListItem extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${team.members.length} member${team.members.length == 1 ? '' : 's'}',
+                        '${(team['members'] as List?)?.length ?? 0} member${((team['members'] as List?)?.length ?? 0) == 1 ? '' : 's'}',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],

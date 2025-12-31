@@ -4,8 +4,7 @@
 library;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:task_management/data/database_helper(task).dart';
-import 'package:task_management/models/task.dart';
+import 'package:task_management/domain/entities/task_entity.dart';
 
 class ReportingScreen extends StatefulWidget {
   const ReportingScreen({super.key});
@@ -16,7 +15,7 @@ class ReportingScreen extends StatefulWidget {
 
 class _ReportingScreenState extends State<ReportingScreen> {
   // State variables for reporting data
-  List<Task> _tasks = []; // All tasks
+  List<TaskEntity> tasks = []; // All tasks
   bool _isLoading = true; // Loading state
   String _errorMessage = ''; // Error message for user feedback
 
@@ -28,8 +27,7 @@ class _ReportingScreenState extends State<ReportingScreen> {
   int _overdueTasks = 0;
   double _completionRate = 0.0;
   
-  // Database instance
-  final TaskDatabase _taskDatabase = TaskDatabase();
+  // Note: Database will be handled by the new architecture
 
   @override
   void initState() {
@@ -41,11 +39,13 @@ class _ReportingScreenState extends State<ReportingScreen> {
   /// Updates statistics and handles errors gracefully
   Future<void> _fetchTasks() async {
     try {
-      final tasks = await _taskDatabase.fetchTasks();
+      // Note: This will be handled by the new architecture
+      // final fetchedTasks = await TaskDatabase().fetchTasks();
+      final fetchedTasks = <TaskEntity>[]; // Placeholder
       
       if (mounted) {
         setState(() {
-          _tasks = tasks;
+          tasks = fetchedTasks;
           _calculateStatistics();
           _isLoading = false;
         });
@@ -65,13 +65,12 @@ class _ReportingScreenState extends State<ReportingScreen> {
   void _calculateStatistics() {
     final now = DateTime.now();
     
-    _totalTasks = _tasks.length;
-    _completedTasks = _tasks.where((task) => task.isCompleted).length;
-    _pendingTasks = _tasks.where((task) => !task.isCompleted).length;
-    _overdueTasks = _tasks.where((task) =>
+    _totalTasks = tasks.length;
+    _completedTasks = tasks.where((task) => task.isCompleted).length;
+    _pendingTasks = tasks.where((task) => !task.isCompleted).length;
+    _overdueTasks = tasks.where((task) =>
       !task.isCompleted &&
-      task.dueDate != null &&
-      task.dueDate!.isBefore(now)
+      (task.dueDate?.isBefore(now) ?? false)
     ).length;
     
     _completionRate = _totalTasks > 0 
@@ -179,7 +178,7 @@ class _ReportingScreenState extends State<ReportingScreen> {
       return _buildErrorWidget();
     }
     
-    if (_tasks.isEmpty) {
+    if (tasks.isEmpty) {
       return _buildEmptyState();
     }
     
@@ -221,7 +220,7 @@ class _ReportingScreenState extends State<ReportingScreen> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha:0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
@@ -234,7 +233,7 @@ class _ReportingScreenState extends State<ReportingScreen> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha:0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
@@ -275,7 +274,7 @@ class _ReportingScreenState extends State<ReportingScreen> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha:0.05),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -288,7 +287,7 @@ class _ReportingScreenState extends State<ReportingScreen> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha:0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -299,7 +298,7 @@ class _ReportingScreenState extends State<ReportingScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  '${_tasks.where((t) => !t.isCompleted && t.status.value == 'in_progress').length}',
+                  '${tasks.where((t) => !t.isCompleted).length}',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -329,7 +328,7 @@ class _ReportingScreenState extends State<ReportingScreen> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha:0.05),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -342,7 +341,7 @@ class _ReportingScreenState extends State<ReportingScreen> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha:0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -377,50 +376,6 @@ class _ReportingScreenState extends State<ReportingScreen> {
     );
   }
 
-  /// Builds individual statistics card
-  /// Creates styled card with icon and value
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  icon,
-                  color: color,
-                  size: 24,
-                ),
-                const Spacer(),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   /// Builds progress chart section
   /// Shows completion rate with visual indicator
@@ -598,7 +553,7 @@ class _ReportingScreenState extends State<ReportingScreen> {
   /// Builds recent activity section
   /// Shows recent tasks with status
   Widget _buildRecentActivity() {
-    final recentTasks = _tasks.take(5).toList();
+    final recentTasks = tasks.take(5).toList();
     
     return Card(
       elevation: 3,
@@ -652,7 +607,7 @@ class _ReportingScreenState extends State<ReportingScreen> {
 
   /// Builds individual recent task item
   /// Creates styled item for recent tasks
-  Widget _buildRecentTaskItem(Task task) {
+  Widget _buildRecentTaskItem(TaskEntity task) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(

@@ -4,19 +4,17 @@
 library;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:provider/provider.dart';
-import 'package:task_management/models/project.dart';
-import 'package:task_management/models/task.dart';
-import 'package:task_management/models/task_list_notifier.dart';
+import 'package:task_management/domain/entities/task_entity.dart';
+import 'package:task_management/data/database_helper(task).dart';
 
 class CreateTask extends StatefulWidget {
-  /// List of available projects for task assignment
-  final List<String> availableProjects;
-
   const CreateTask({
     super.key,
-    required this.availableProjects,
+    this.availableProjects = const [],
   });
+  
+  /// List of available projects for task assignment
+  final List<String> availableProjects;
 
   @override
   _CreateTaskState createState() => _CreateTaskState();
@@ -34,7 +32,6 @@ class _CreateTaskState extends State<CreateTask> {
   DateTime _selectedDueDate = DateTime.now();
   String? _selectedMember;
   String? _selectedProjectId;
-  String? _selectedProjectName;
   List<String> _memberList = []; // Available team members
   bool _isLoading = false; // Loading state for operations
   String _errorMessage = ''; // Error message for user feedback
@@ -47,8 +44,10 @@ class _CreateTaskState extends State<CreateTask> {
   final List<String> _categories = ['Work', 'Personal', 'Shopping', 'Health', 'Other'];
   String _selectedCategory = 'Work';
   
-  // Firestore references
-  final CollectionReference _tasksCollection = FirebaseFirestore.instance.collection('tasks');
+  // Database helper
+  final TaskDatabase _taskDatabase = TaskDatabase();
+  
+  // Firestore references for fetching data
   final CollectionReference _usersCollection = FirebaseFirestore.instance.collection('users');
   final CollectionReference _projectsCollection = FirebaseFirestore.instance.collection('projects');
 
@@ -85,17 +84,20 @@ class _CreateTaskState extends State<CreateTask> {
         _errorMessage = '';
       });
       
-      final QuerySnapshot usersSnapshot = await _usersCollection.get();
+      final QuerySnapshot usersSnapshot = await _usersCollection.limit(50).get();
       
       if (usersSnapshot.docs.isNotEmpty) {
         final List<String> users = usersSnapshot.docs
-            .map((doc) => (doc.data() as Map<String, dynamic>?)?['name']?.toString() ?? 'Unknown')
-            .where((name) => name.isNotEmpty && name != 'Unknown')
+            .map((doc) {
+              final data = doc.data() as Map<String, dynamic>?;
+              return data?['name']?.toString() ?? data?['email']?.toString() ?? 'Unknown User';
+            })
+            .where((name) => name.isNotEmpty && name != 'Unknown User')
             .toList();
         
         if (mounted) {
           setState(() {
-            _memberList = users;
+            _memberList = users.isNotEmpty ? users : ['No members available'];
             _isLoading = false;
           });
         }
@@ -111,6 +113,7 @@ class _CreateTaskState extends State<CreateTask> {
       if (mounted) {
         setState(() {
           _errorMessage = 'Failed to fetch members: ${e.toString()}';
+          _memberList = ['Default User'];
           _isLoading = false;
         });
       }
@@ -231,92 +234,61 @@ class _CreateTaskState extends State<CreateTask> {
     );
   }
 
-  /// Builds loading overlay
-  /// Shows loading indicator during operations
-  Widget _buildLoadingOverlay() {
-    return Container(
-      color: Colors.black.withOpacity(0.5),
-      child: const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Creating task...'),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   /// Builds task information card
-  /// Includes task name, description, and due date
+  /// Contains title and description fields
   Widget _buildTaskInformationCard() {
     return Card(
-      elevation: 3,
+      elevation: 4,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'Task Information',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
+                color: Colors.blue,
               ),
             ),
             const SizedBox(height: 16),
+            // Task name field
             TextFormField(
               controller: _taskNameController,
               decoration: const InputDecoration(
-                labelText: 'Task Name',
+                labelText: 'Task Name *',
+                hintText: 'Enter task name',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.task),
               ),
               validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter a task name';
+                if (value == null || value.trim().isEmpty) {
+                  return 'Task name is required';
+                }
+                if (value.trim().length < 3) {
+                  return 'Task name must be at least 3 characters';
                 }
                 return null;
               },
             ),
             const SizedBox(height: 16),
+            // Description field
             TextFormField(
               controller: _descriptionController,
-              maxLines: 3,
               decoration: const InputDecoration(
-                labelText: 'Task Description',
+                labelText: 'Description',
+                hintText: 'Enter task description',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.description),
               ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                const Text('Due Date: '),
-                const SizedBox(width: 8),
-                TextButton(
-                  onPressed: () async {
-                    DateTime? pickedDate = await showDatePicker(
-                      context: context,
-                      initialDate: _selectedDueDate,
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2101),
-                    );
-                    if (pickedDate != null && pickedDate != _selectedDueDate) {
-                      setState(() {
-                        _selectedDueDate = pickedDate;
-                      });
-                    }
-                  },
-                  child: Text(
-                    "${_selectedDueDate.toLocal()}".split(' ')[0],
-                    style: const TextStyle(color: Colors.blue),
-                  ),
-                ),
-              ],
+              maxLines: 3,
+              validator: (value) {
+                if (value != null && value.trim().length > 500) {
+                  return 'Description must be less than 500 characters';
+                }
+                return null;
+              },
             ),
           ],
         ),
@@ -325,57 +297,75 @@ class _CreateTaskState extends State<CreateTask> {
   }
 
   /// Builds task details card
-  /// Includes task priority and category
+  /// Contains due date, priority, and category
   Widget _buildTaskDetailsCard() {
     return Card(
-      elevation: 3,
+      elevation: 4,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'Task Details',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
+                color: Colors.blue,
               ),
             ),
             const SizedBox(height: 16),
-            DropdownButtonFormField(
-              decoration: const InputDecoration(
-                labelText: 'Priority',
+            // Due date picker
+            ListTile(
+              leading: const Icon(Icons.calendar_today),
+              title: const Text('Due Date'),
+              subtitle: Text(
+                '${_selectedDueDate.day}/${_selectedDueDate.month}/${_selectedDueDate.year}',
               ),
-              items: _priorityLevels
-                  .map((priority) => DropdownMenuItem(
-                        value: priority,
-                        child: Text(priority),
-                      ))
-                  .toList(),
-              initialValue: _selectedPriority,
-              onChanged: (value) {
-                setState(() {
-                  _selectedPriority = value as String;
-                });
-              },
+              trailing: const Icon(Icons.arrow_forward_ios),
+              onTap: _selectDueDate,
             ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField(
-              decoration: const InputDecoration(
-                labelText: 'Category',
+            const Divider(),
+            // Priority dropdown
+            ListTile(
+              leading: const Icon(Icons.flag),
+              title: const Text('Priority'),
+              subtitle: Text(_selectedPriority),
+              trailing: DropdownButton<String>(
+                value: _selectedPriority,
+                items: _priorityLevels.map((priority) {
+                  return DropdownMenuItem(
+                    value: priority,
+                    child: Text(priority),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedPriority = value!;
+                  });
+                },
               ),
-              items: _categories
-                  .map((category) => DropdownMenuItem(
-                        value: category,
-                        child: Text(category),
-                      ))
-                  .toList(),
-              initialValue: _selectedCategory,
-              onChanged: (value) {
-                setState(() {
-                  _selectedCategory = value as String;
-                });
-              },
+            ),
+            const Divider(),
+            // Category dropdown
+            ListTile(
+              leading: const Icon(Icons.category),
+              title: const Text('Category'),
+              subtitle: Text(_selectedCategory),
+              trailing: DropdownButton<String>(
+                value: _selectedCategory,
+                items: _categories.map((category) {
+                  return DropdownMenuItem(
+                    value: category,
+                    child: Text(category),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedCategory = value!;
+                  });
+                },
+              ),
             ),
           ],
         ),
@@ -384,35 +374,49 @@ class _CreateTaskState extends State<CreateTask> {
   }
 
   /// Builds assignment card
-  /// Includes member selection
+  /// Contains member selection
   Widget _buildAssignmentCard() {
     return Card(
-      elevation: 3,
+      elevation: 4,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Assign Members',
+              'Assignment',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
+                color: Colors.blue,
               ),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(_selectedMember ?? 'Select Member'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    _selectMember(context);
-                  },
-                  child: const Text('Choose'),
-                ),
-              ],
+            // Member dropdown
+            DropdownButtonFormField<String>(
+              value: _selectedMember,
+              decoration: const InputDecoration(
+                labelText: 'Assign to *',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.person),
+              ),
+              items: _memberList.map((member) {
+                return DropdownMenuItem(
+                  value: member,
+                  child: Text(member),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedMember = value;
+                });
+              },
+              validator: (value) {
+                if (value == null) {
+                  return 'Please select a team member';
+                }
+                return null;
+              },
             ),
           ],
         ),
@@ -421,35 +425,49 @@ class _CreateTaskState extends State<CreateTask> {
   }
 
   /// Builds project card
-  /// Includes project selection
+  /// Contains project selection
   Widget _buildProjectCard() {
     return Card(
-      elevation: 3,
+      elevation: 4,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Project Information',
+              'Project',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
+                color: Colors.blue,
               ),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(_selectedProjectName ?? 'Select Project'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    _selectProject(context);
-                  },
-                  child: const Text('Choose'),
-                ),
-              ],
+            // Project dropdown
+            DropdownButtonFormField<String>(
+              value: _selectedProjectId,
+              decoration: const InputDecoration(
+                labelText: 'Select Project *',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.assignment),
+              ),
+              items: widget.availableProjects.map((project) {
+                return DropdownMenuItem(
+                  value: project,
+                  child: Text(project),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedProjectId = value;
+                });
+              },
+              validator: (value) {
+                if (value == null) {
+                  return 'Please select a project';
+                }
+                return null;
+              },
             ),
           ],
         ),
@@ -457,7 +475,6 @@ class _CreateTaskState extends State<CreateTask> {
     );
   }
 
-  /// Builds create button
   /// Creates task when pressed
   Widget _buildCreateButton() {
     return ElevatedButton(
@@ -466,221 +483,36 @@ class _CreateTaskState extends State<CreateTask> {
     );
   }
 
-  /// Checks if task can be created
-  /// Validates form and checks for member and project selection
-  bool _canCreateTask() {
-    return _formKey.currentState!.validate() &&
-        _selectedMember != null &&
-        _selectedProjectId != null;
-  }
-
-  /// Shows member selection modal
-  /// Displays available team members for assignment
-  void _selectMember(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Select Team Member',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
+  /// Builds loading overlay
+  /// Shows loading indicator during operations
+  Widget _buildLoadingOverlay() {
+    return Container(
+      color: Colors.black.withValues(alpha: 0.5),
+      child: const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(
+                  'Creating task...',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              const Divider(height: 1),
-              // Member list
-              SizedBox(
-                height: 300,
-                child: ListView.builder(
-                  itemCount: _memberList.length,
-                  itemBuilder: (context, index) {
-                    final member = _memberList[index];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Theme.of(context).primaryColor,
-                        child: Text(
-                          member.isNotEmpty ? member[0].toUpperCase() : '?',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      title: Text(member),
-                      trailing: _selectedMember == member
-                          ? const Icon(Icons.check, color: Colors.green)
-                          : null,
-                      onTap: () {
-                        setState(() {
-                          _selectedMember = member;
-                        });
-                        Navigator.pop(context);
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
-  /// Shows project selection modal
-  /// Displays available projects for task assignment
-  void _selectProject(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Select Project',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              // Project list
-              SizedBox(
-                height: 300,
-                child: FutureBuilder<List<Project>>(
-                  future: _fetchAvailableProjects(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
-                    }
-                    
-                    if (snapshot.hasError) {
-                      return Center(
-                        child: Text(
-                          'Error loading projects: ${snapshot.error}',
-                          style: const TextStyle(color: Colors.red),
-                        ),
-                      );
-                    }
-                    
-                    final projects = snapshot.data ?? [];
-                    return ListView.builder(
-                      itemCount: projects.length,
-                      itemBuilder: (context, index) {
-                        final project = projects[index];
-                        return ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Theme.of(context).primaryColor,
-                            child: const Icon(
-                              Icons.folder,
-                              color: Colors.white,
-                            ),
-                          ),
-                          title: Text(project.name),
-                          subtitle: project.description.isNotEmpty
-                              ? Text(
-                                  project.description,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                )
-                              : null,
-                          trailing: _selectedProjectId == project.id
-                              ? const Icon(Icons.check, color: Colors.green)
-                              : null,
-                          onTap: () {
-                            setState(() {
-                              _selectedProjectId = project.id;
-                              _selectedProjectName = project.name;
-                            });
-                            Navigator.pop(context);
-                          },
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  /// Fetches available projects from Firestore
-  /// Returns list of projects for selection
-  Future<List<Project>> _fetchAvailableProjects() async {
-    try {
-      final QuerySnapshot result = await _projectsCollection.get();
-      final List<DocumentSnapshot> documents = result.docs;
-
-      List<Project> projects = documents.map((doc) {
-        final Timestamp? dueDateTimestamp = doc['dueDate'] as Timestamp?;
-        final DateTime dueDate = dueDateTimestamp?.toDate() ?? DateTime.now();
-
-        return Project(
-          id: doc.id,
-          name: doc['name'] ?? '',
-          description: doc['description'] ?? '',
-          dueDate: dueDate,
-          tasks: [],
-          isCompleted: false,
-        );
-      }).toList();
-
-      return projects;
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Error fetching projects: ${e.toString()}';
-      });
-      return [];
-    }
-  }
-
-  /// Creates new task in Firestore
+  /// Creates new task using TaskDatabase
   /// Validates form and saves task with proper error handling
   Future<void> _createTask() async {
     if (!_formKey.currentState!.validate()) {
@@ -700,44 +532,67 @@ class _CreateTaskState extends State<CreateTask> {
     });
 
     try {
-      // Create new task object
-      final newTask = Task(
-        id: DateTime.now().toIso8601String(),
+      // Create new task object with proper TaskEntity structure
+      final newTask = TaskEntity(
+        id: '', // Will be generated by database
         title: _taskNameController.text.trim(),
         description: _descriptionController.text.trim(),
         dueDate: _selectedDueDate,
         assignedMembers: [_selectedMember!],
-        associatedProject: Project(
-          id: _selectedProjectId!,
-          name: _selectedProjectName ?? _selectedProjectId!,
-          description: '',
-          dueDate: DateTime.now(),
-          tasks: [],
-          isCompleted: false,
-        ),
-        attachments: [],
+        assignedTo: _selectedMember!,
+        projectId: _selectedProjectId!,
+        attachments: const [],
         isCompleted: false,
+        status: TaskStatus.todo,
+        priority: _getTaskPriorityEnum(_selectedPriority),
+        tags: [_selectedCategory],
+        createdBy: _selectedMember!,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
 
-      // Save task to Firestore
-      await _tasksCollection.add(newTask.toMap());
+      // Save task using TaskDatabase
+      final taskId = await _taskDatabase.addTask(newTask);
       
-      // Update project with new task
-      await _updateProjectTask(_selectedProjectId!, newTask.title);
+      // Update project with new task reference
+      await _updateProjectTask(_selectedProjectId!, taskId);
       
-      // Update local state
-      Provider.of<TaskListNotifier>(context, listen: false).addTask(newTask);
-      
-      // Show success message
-      _showSuccessSnackBar('Task created successfully!');
-      
-      // Return to previous screen with task data
-      Navigator.pop(context, newTask);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        // Show success message and navigate back
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Task created successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context, true);
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to create task: ${e.toString()}';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Failed to create task: ${e.toString()}';
+        });
+      }
+    }
+  }
+
+  /// Converts priority string to TaskPriority enum
+  TaskPriority _getTaskPriorityEnum(String priority) {
+    switch (priority.toLowerCase()) {
+      case 'low':
+        return TaskPriority.low;
+      case 'medium':
+        return TaskPriority.medium;
+      case 'high':
+        return TaskPriority.high;
+      case 'urgent':
+        return TaskPriority.urgent;
+      default:
+        return TaskPriority.medium;
     }
   }
 
@@ -746,48 +601,35 @@ class _CreateTaskState extends State<CreateTask> {
   Future<void> _updateProjectTask(String projectId, String taskTitle) async {
     try {
       await _projectsCollection.doc(projectId).update({
-        'tasks': FieldValue.arrayUnion([
-          {
-            'title': taskTitle,
-            'projectId': projectId,
-            'createdAt': FieldValue.serverTimestamp(),
-          }
-        ]),
+        'lastUpdated': FieldValue.serverTimestamp(),
+        'taskCount': FieldValue.increment(1),
       });
     } catch (e) {
-      // Log error but don't fail task creation
-      print('Error updating project task: $e');
+      print('Failed to update project: $e');
     }
   }
 
-  /// Shows success snackbar message
-  /// Provides positive feedback for successful operations
-  void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle, color: Colors.white),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.green[600],
-        duration: const Duration(seconds: 3),
-        action: SnackBarAction(
-          label: 'Dismiss',
-          textColor: Colors.white,
-          onPressed: () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          },
-        ),
-      ),
+  /// Shows date picker for due date selection
+  Future<void> _selectDueDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDueDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
     );
+    
+    if (picked != null && picked != _selectedDueDate) {
+      setState(() {
+        _selectedDueDate = picked;
+      });
+    }
+  }
+
+  /// Validates if task can be created
+  bool _canCreateTask() {
+    return !_isLoading &&
+        _taskNameController.text.trim().isNotEmpty &&
+        _selectedMember != null &&
+        _selectedProjectId != null;
   }
 }

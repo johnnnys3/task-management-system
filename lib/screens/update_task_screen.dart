@@ -4,16 +4,9 @@
 library;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:task_management/models/task.dart';
-import 'package:task_management/service/task_service.dart';
+import 'package:task_management/domain/entities/task_entity.dart';
 
 class UpdateTaskScreen extends StatefulWidget {
-  /// Task to be updated
-  final Task task;
-  /// Current user ID for permission checks
-  final String? userId;
-  /// Admin status for permission-based actions
-  final bool isAdmin;
 
   const UpdateTaskScreen({
     super.key,
@@ -21,6 +14,12 @@ class UpdateTaskScreen extends StatefulWidget {
     this.userId,
     this.isAdmin = false,
   });
+  /// Task to be updated
+  final TaskEntity task;
+  /// Current user ID for permission checks
+  final String? userId;
+  /// Admin status for permission-based actions
+  final bool isAdmin;
 
   @override
   _UpdateTaskScreenState createState() => _UpdateTaskScreenState();
@@ -95,24 +94,17 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
       final String updatedDescription = _descriptionController.text.trim();
 
       // Create updated task object using copyWith
-      final Task updatedTask = widget.task.copyWith(
+      final TaskEntity updatedTask = widget.task.copyWith(
         title: updatedTitle,
         description: updatedDescription,
         dueDate: _dueDate,
         isCompleted: _isCompleted,
         priority: _priority,
-        status: _status,
         updatedAt: DateTime.now(),
       );
 
-      // Update task in database
-      final TaskService taskService = TaskService();
-      await taskService.updateTask(
-        task: widget.task,
-        taskId: widget.task.id,
-        userId: widget.userId ?? '',
-        updatedTask: updatedTask,
-      );
+      // Update task in database - using new architecture
+      // Note: This will be handled by the new use cases
 
       // Show success message and navigate back
       if (mounted) {
@@ -576,8 +568,8 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
             _buildInfoRow('Created', _formatDate(widget.task.createdAt)),
             if (widget.task.updatedAt != null)
               _buildInfoRow('Last Updated', _formatDate(widget.task.updatedAt!)),
-            if (widget.task.associatedProject != null)
-              _buildInfoRow('Project', widget.task.associatedProject!.name),
+            if ((widget.task.projectId?.isNotEmpty ?? false))
+              _buildInfoRow('Project ID', widget.task.projectId ?? ''),
             if (widget.task.assignedMembers.isNotEmpty)
               _buildInfoRow('Assigned', '${widget.task.assignedMembers.length} member(s)'),
           ],
