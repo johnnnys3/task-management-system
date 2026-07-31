@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:task_management/models/task.dart';
 import 'package:task_management/data/database_helper(task).dart';
+import 'package:task_management/data/task_store.dart';
 
 /// Manages the state of a list of tasks with CRUD operations and filtering
 class TaskListNotifier extends ChangeNotifier {
   static final Logger _logger = Logger('TaskListNotifier');
-  final TaskDatabase _taskDatabase = TaskDatabase();
+  final TaskStore _taskStore;
+
+  TaskListNotifier({TaskStore? taskStore}) : _taskStore = taskStore ?? TaskDatabase();
 
   List<Task> _tasks = [];
   List<Task> _filteredTasks = [];
@@ -44,7 +47,7 @@ class TaskListNotifier extends ChangeNotifier {
   Future<void> loadTasks() async {
     _setLoading(true);
     try {
-      final tasks = await _taskDatabase.fetchTasks();
+      final tasks = await _taskStore.fetch();
       _tasks = tasks;
       _applyFiltersAndSort();
       _clearError();
@@ -61,7 +64,7 @@ class TaskListNotifier extends ChangeNotifier {
   Future<void> loadTasksForProject(String projectId) async {
     _setLoading(true);
     try {
-      final tasks = await _taskDatabase.fetchTasksForProject(projectId);
+      final tasks = await _taskStore.fetch(projectId: projectId);
       _tasks = tasks;
       _applyFiltersAndSort();
       _clearError();
@@ -78,7 +81,7 @@ class TaskListNotifier extends ChangeNotifier {
   Future<void> loadTasksForUser(String userId) async {
     _setLoading(true);
     try {
-      final tasks = await _taskDatabase.fetchTasksForUser(userId);
+      final tasks = await _taskStore.fetch(userId: userId);
       _tasks = tasks;
       _applyFiltersAndSort();
       _clearError();
@@ -95,7 +98,7 @@ class TaskListNotifier extends ChangeNotifier {
   Future<void> addTask(Task task) async {
     try {
       _validateTask(task);
-      final taskId = await _taskDatabase.addTask(task);
+      final taskId = await _taskStore.create(task);
       final newTask = task.copyWith(id: taskId);
       _tasks.add(newTask);
       _applyFiltersAndSort();
@@ -112,7 +115,7 @@ class TaskListNotifier extends ChangeNotifier {
   Future<void> updateTask(Task task) async {
     try {
       _validateTask(task);
-      await _taskDatabase.updateTaskWithObject(task);
+      await _taskStore.update(task);
       final index = _tasks.indexWhere((t) => t.id == task.id);
       if (index != -1) {
         _tasks[index] = task;
@@ -136,7 +139,7 @@ class TaskListNotifier extends ChangeNotifier {
         throw ArgumentError('Task ID is required');
       }
       
-      await _taskDatabase.deleteTask(taskId);
+      await _taskStore.delete(taskId);
       _tasks.removeWhere((task) => task.id == taskId);
       _applyFiltersAndSort();
       _clearError();

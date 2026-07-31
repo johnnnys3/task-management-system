@@ -96,16 +96,16 @@ class TaskManagementApp extends StatelessWidget {
           create: (context) => AuthenticationService(),
           lazy: false, // Initialize immediately for auth state
         ),
-        // Task list notifier provider
-        ChangeNotifierProvider<TaskListNotifier>(
-          create: (context) => TaskListNotifier(),
-          lazy: true, // Initialize only when needed
-        ),
         // Task data access, concrete adapter chosen once here at the root.
         // Tests bypass main() entirely and inject InMemoryTaskStore directly.
         Provider<TaskStore>(
           create: (context) => TaskDatabase(),
           lazy: true,
+        ),
+        // Task list notifier provider
+        ChangeNotifierProvider<TaskListNotifier>(
+          create: (context) => TaskListNotifier(taskStore: context.read<TaskStore>()),
+          lazy: true, // Initialize only when needed
         ),
       ],
       child: MaterialApp(
