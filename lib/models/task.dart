@@ -398,6 +398,16 @@ class Task {
     return null;
   }
 
+  /// Validates the task, consolidating [validateTitle], [validateDescription]
+  /// and [validateDueDate]. Returns the list of failure messages (empty if valid).
+  List<String> validate() {
+    return [
+      validateTitle(title),
+      validateDescription(description),
+      validateDueDate(dueDate),
+    ].whereType<String>().toList();
+  }
+
   /// Checks if the task has a due date
   bool get hasDueDate => dueDate != null;
 
