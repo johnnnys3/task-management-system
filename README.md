@@ -1,5 +1,9 @@
 # Task Management System
 
+![Flutter](https://img.shields.io/badge/Flutter-02569B?logo=flutter&logoColor=white)
+![Dart](https://img.shields.io/badge/Dart-0175C2?logo=dart&logoColor=white)
+![Firebase](https://img.shields.io/badge/Firebase-FFCA28?logo=firebase&logoColor=black)
+
 A Flutter task management application for organizing tasks, projects, teams, deadlines, and productivity workflows. The project combines a clean mobile interface with Firebase-backed authentication, real-time data, local persistence, and project-based task organization.
 
 ## Overview
