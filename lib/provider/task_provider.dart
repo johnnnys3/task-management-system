@@ -6,12 +6,15 @@ import 'package:task_management/models/task_list_notifier.dart';
 import 'dart:async';
 
 import 'package:task_management/data/database_helper(task).dart';
+import 'package:task_management/data/task_store.dart';
 
 /// Provider for managing a single task's state
 class TaskProvider extends ChangeNotifier {
   static final Logger _logger = Logger('TaskProvider');
-  final TaskDatabase _taskDatabase = TaskDatabase();
-  
+  final TaskStore _taskStore;
+
+  TaskProvider({TaskStore? taskStore}) : _taskStore = taskStore ?? TaskDatabase();
+
   Task? _task;
   bool _isLoading = false;
   String? _error;
@@ -33,7 +36,13 @@ class TaskProvider extends ChangeNotifier {
 
     _setLoading(true);
     try {
-      final task = await _taskDatabase.getTask(taskId);
+      // ponytail: TaskStore has no get-by-id; fetch and find locally. Add a
+      // dedicated lookup if this ever needs to scale past a small task list.
+      final tasks = await _taskStore.fetch();
+      final task = tasks.firstWhere(
+        (t) => t.id == taskId,
+        orElse: () => throw TaskNotFoundException(taskId),
+      );
       _task = task;
       _isDirty = false;
       _clearError();
@@ -63,22 +72,6 @@ class TaskProvider extends ChangeNotifier {
   }) async {
     _setLoading(true);
     try {
-      // Validate input
-      final titleError = Task.validateTitle(title);
-      if (titleError != null) {
-        throw ArgumentError(titleError);
-      }
-      
-      final descriptionError = Task.validateDescription(description);
-      if (descriptionError != null) {
-        throw ArgumentError(descriptionError);
-      }
-      
-      final dueDateError = Task.validateDueDate(dueDate);
-      if (dueDateError != null) {
-        throw ArgumentError(dueDateError);
-      }
-
       final newTask = Task(
         id: '', // Will be set by database
         title: title.trim(),
@@ -98,7 +91,7 @@ class TaskProvider extends ChangeNotifier {
         updatedAt: DateTime.now(),
       );
 
-      final taskId = await _taskDatabase.addTask(newTask);
+      final taskId = await _taskStore.create(newTask);
       _task = newTask.copyWith(id: taskId);
       _isDirty = false;
       _clearError();
@@ -154,7 +147,7 @@ class TaskProvider extends ChangeNotifier {
         updatedAt: DateTime.now(),
       );
 
-      await _taskDatabase.updateTaskWithObject(updatedTask);
+      await _taskStore.update(updatedTask);
       _task = updatedTask;
       _isDirty = false;
       _clearError();
@@ -214,11 +207,12 @@ class TaskProvider extends ChangeNotifier {
 
     _setLoading(true);
     try {
-      await _taskDatabase.deleteTask(_task!.id);
+      final deletedId = _task!.id;
+      await _taskStore.delete(deletedId);
       _task = null;
       _isDirty = false;
       _clearError();
-      _logger.info('Deleted task: ${_task!.id}');
+      _logger.info('Deleted task: $deletedId');
     } catch (e, stackTrace) {
       _setError('Failed to delete task: $e');
       _logger.severe('Error deleting task', e, stackTrace);
@@ -276,8 +270,10 @@ class TaskProvider extends ChangeNotifier {
 /// Enhanced provider for managing a list of tasks
 class TaskListProvider extends ChangeNotifier {
   static final Logger _logger = Logger('TaskListProvider');
-  final TaskDatabase _taskDatabase = TaskDatabase();
-  
+  final TaskStore _taskStore;
+
+  TaskListProvider({TaskStore? taskStore}) : _taskStore = taskStore ?? TaskDatabase();
+
   List<Task> _tasks = [];
   List<Task> _filteredTasks = [];
   bool _isLoading = false;
@@ -314,7 +310,7 @@ class TaskListProvider extends ChangeNotifier {
   Future<void> fetchTasks() async {
     _setLoading(true);
     try {
-      _tasks = await _taskDatabase.fetchTasks();
+      _tasks = await _taskStore.fetch();
       _applyFiltersAndSort();
       _clearError();
       _logger.info('Fetched ${_tasks.length} tasks');
@@ -335,7 +331,7 @@ class TaskListProvider extends ChangeNotifier {
 
     _setLoading(true);
     try {
-      _tasks = await _taskDatabase.fetchTasksForProject(projectId);
+      _tasks = await _taskStore.fetch(projectId: projectId);
       _applyFiltersAndSort();
       _clearError();
       _logger.info('Fetched ${_tasks.length} tasks for project $projectId');
@@ -356,7 +352,7 @@ class TaskListProvider extends ChangeNotifier {
 
     _setLoading(true);
     try {
-      _tasks = await _taskDatabase.fetchTasksForUser(userId);
+      _tasks = await _taskStore.fetch(userId: userId);
       _applyFiltersAndSort();
       _clearError();
       _logger.info('Fetched ${_tasks.length} tasks for user $userId');
@@ -371,7 +367,7 @@ class TaskListProvider extends ChangeNotifier {
   /// Adds a new task to the list
   Future<void> addTask(Task task) async {
     try {
-      final taskId = await _taskDatabase.addTask(task);
+      final taskId = await _taskStore.create(task);
       final newTask = task.copyWith(id: taskId);
       _tasks.add(newTask);
       _applyFiltersAndSort();
@@ -387,7 +383,7 @@ class TaskListProvider extends ChangeNotifier {
   /// Updates an existing task in the list
   Future<void> updateTask(Task task) async {
     try {
-      await _taskDatabase.updateTaskWithObject(task);
+      await _taskStore.update(task);
       final index = _tasks.indexWhere((t) => t.id == task.id);
       if (index != -1) {
         _tasks[index] = task;
@@ -410,7 +406,7 @@ class TaskListProvider extends ChangeNotifier {
     }
 
     try {
-      await _taskDatabase.deleteTask(taskId);
+      await _taskStore.delete(taskId);
       _tasks.removeWhere((task) => task.id == taskId);
       _applyFiltersAndSort();
       _clearError();
