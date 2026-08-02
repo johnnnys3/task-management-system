@@ -116,33 +116,6 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
     }
   }
 
-  /// Validates project name
-  /// Ensures name is not empty and meets requirements
-  String? _validateName(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Project name is required';
-    }
-    if (value.trim().length < 3) {
-      return 'Project name must be at least 3 characters';
-    }
-    if (value.trim().length > 50) {
-      return 'Project name cannot exceed 50 characters';
-    }
-    return null;
-  }
-
-  /// Validates project description
-  /// Ensures description meets requirements
-  String? _validateDescription(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Project description is required';
-    }
-    if (value.trim().length > 500) {
-      return 'Description cannot exceed 500 characters';
-    }
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
     return EntityFormScaffold(
@@ -182,7 +155,7 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
     return TextFormField(
       controller: _nameController,
       focusNode: _nameFocusNode,
-      validator: _validateName,
+      validator: Project.validateName,
       decoration: InputDecoration(
         labelText: 'Project Name',
         hintText: 'Enter project name',
@@ -208,7 +181,7 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
       onFieldSubmitted: (_) {
         FocusScope.of(context).requestFocus(_descriptionFocusNode);
       },
-      maxLength: 50,
+      maxLength: 100,
       buildCounter: (context, {required currentLength, required isFocused, maxLength}) {
         return Text(
           '$currentLength/$maxLength',
@@ -226,7 +199,7 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
     return TextFormField(
       controller: _descriptionController,
       focusNode: _descriptionFocusNode,
-      validator: _validateDescription,
+      validator: Project.validateDescription,
       maxLines: 5,
       decoration: InputDecoration(
         labelText: 'Description',
