@@ -2,7 +2,8 @@
 /// Provides rich team display with modern UI and interactive features
 /// Includes team creation, member management, and role assignments
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import 'package:task_management/data/team_store.dart';
 import 'package:task_management/models/team.dart';
 
 class TeamManagementScreen extends StatefulWidget {
@@ -34,13 +35,13 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
   
   // Filter options
   final List<String> _filterOptions = ['All', 'Active', 'Inactive', 'My Teams'];
-  
-  // Firestore references
-  final CollectionReference _teamsCollection = FirebaseFirestore.instance.collection('teams');
+
+  late final TeamStore _teamStore;
 
   @override
   void initState() {
     super.initState();
+    _teamStore = context.read<TeamStore>();
     // Load teams and setup listeners
     _loadTeams();
     _setupSearchListener();
@@ -300,11 +301,7 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
         _errorMessage = '';
       });
       
-      // Fetch teams from Firestore
-      final QuerySnapshot snapshot = await _teamsCollection.get();
-      final List<Team> loadedTeams = snapshot.docs
-          .map((doc) => Team.fromMap(doc.data() as Map<String, dynamic>, doc.id))
-          .toList();
+      final loadedTeams = await _teamStore.fetch();
 
       setState(() {
         _teams = loadedTeams;
@@ -410,8 +407,7 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
           _errorMessage = '';
         });
         
-        // Delete from Firestore
-        await _teamsCollection.doc(team.id).delete();
+        await _teamStore.delete(team.id);
         await _loadTeams();
         _showSuccessSnackBar('Team deleted successfully');
       } catch (e) {
