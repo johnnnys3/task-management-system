@@ -3,21 +3,19 @@
 /// Includes form validation, error handling, and user feedback
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:task_management/data/task_store.dart';
 import 'package:task_management/models/task.dart';
-import 'package:task_management/service/task_service.dart';
 
 class UpdateTaskScreen extends StatefulWidget {
   /// Task to be updated
   final Task task;
-  /// Current user ID for permission checks
-  final String? userId;
   /// Admin status for permission-based actions
   final bool isAdmin;
 
   const UpdateTaskScreen({
     Key? key,
     required this.task,
-    this.userId,
     this.isAdmin = false,
   }) : super(key: key);
 
@@ -104,14 +102,8 @@ class _UpdateTaskScreenState extends State<UpdateTaskScreen> {
         updatedAt: DateTime.now(),
       );
 
-      // Update task in database
-      final TaskService taskService = TaskService();
-      await taskService.updateTask(
-        task: widget.task,
-        taskId: widget.task.id,
-        userId: widget.userId ?? '',
-        updatedTask: updatedTask,
-      );
+      // Update task via TaskStore
+      await context.read<TaskStore>().update(updatedTask);
 
       // Show success message and navigate back
       if (mounted) {

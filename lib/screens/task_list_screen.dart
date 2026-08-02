@@ -2,12 +2,13 @@
 /// Provides rich task display with modern UI and interactive features
 /// Includes filtering, sorting, search, and batch operations
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:task_management/authentication/user.dart';
+import 'package:task_management/data/task_store.dart';
 import 'package:task_management/models/task.dart' as TaskModel;
 import 'package:task_management/screens/task_details_screen.dart';
 import 'package:task_management/screens/task_creation_screen.dart';
 import 'package:task_management/screens/update_task_screen.dart';
-import 'package:task_management/service/task_service.dart';
 
 class TaskListScreen extends StatefulWidget {
   /// User ID for filtering tasks
@@ -35,7 +36,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
   // State variables for task management
   List<TaskModel.Task> _tasks = [];
   List<TaskModel.Task> _filteredTasks = [];
-  final TaskService _taskService = TaskService();
+  late final TaskStore _taskStore;
   bool _isLoading = false;
   String _errorMessage = '';
   
@@ -58,6 +59,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
   @override
   void initState() {
     super.initState();
+    _taskStore = context.read<TaskStore>();
     // Initialize tasks from passed list
     _tasks = widget.tasks;
     _filteredTasks = _tasks;
@@ -82,9 +84,8 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
         _errorMessage = '';
       });
       
-      // Fetch tasks using service
-      final List<TaskModel.Task> loadedTasks =
-          (await _taskService.getTasks(userId: widget.userId)).cast<TaskModel.Task>();
+      // Fetch tasks via TaskStore
+      final loadedTasks = await _taskStore.fetch(userId: widget.userId);
 
       setState(() {
         _tasks = loadedTasks;
@@ -605,7 +606,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
         _errorMessage = '';
       });
       
-      await _taskService.addTask(userId: widget.userId, task: newTask);
+      await _taskStore.create(newTask.copyWith(assignedTo: widget.userId));
       await _loadTasks();
       _showSuccessSnackBar('Task added successfully');
     } catch (e) {
@@ -645,10 +646,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
           _errorMessage = '';
         });
         
-        await _taskService.deleteTask(
-          userId: widget.userId,
-          taskId: task.id,
-        );
+        await _taskStore.delete(task.id);
         await _loadTasks();
         _showSuccessSnackBar('Task deleted successfully');
       } catch (e) {
@@ -722,10 +720,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
         });
         
         // Delete task from service
-        await _taskService.deleteTask(
-          userId: widget.userId,
-          taskId: task.id,
-        );
+        await _taskStore.delete(task.id);
         
         // Reload tasks
         await _loadTasks();
@@ -802,10 +797,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
         
         // Delete all selected tasks
         for (final taskId in _selectedTasks) {
-          await _taskService.deleteTask(
-            userId: widget.userId,
-            taskId: taskId,
-          );
+          await _taskStore.delete(taskId);
         }
         
         // Reload and exit selection mode
