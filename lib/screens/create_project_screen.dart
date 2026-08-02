@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:task_management/data/database_helper(project).dart';
+import 'package:provider/provider.dart';
+import 'package:task_management/data/project_store.dart';
 import 'package:task_management/models/project.dart';
 
 class CreateProjectScreen extends StatefulWidget {
@@ -56,8 +57,8 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
         isCompleted: false,
       );
 
-      await ProjectDatabase().addProject(newProject);
-      
+      await context.read<ProjectStore>().create(newProject);
+
       if (mounted) {
         Navigator.pop(context, newProject);
       }
@@ -72,38 +73,6 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
         });
       }
     }
-  }
-
-  /// Validates project name input
-  /// Ensures project name meets all requirements:
-  /// - Not empty
-  /// - Between 3-50 characters
-  /// - Only contains allowed characters (letters, numbers, spaces, hyphens, underscores)
-  String? _validateProjectName(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Project name is required';
-    }
-    if (value.trim().length < 3) {
-      return 'Project name must be at least 3 characters';
-    }
-    if (value.trim().length > 50) {
-      return 'Project name must not exceed 50 characters';
-    }
-    // Regex to allow only letters, numbers, spaces, hyphens, and underscores
-    if (!RegExp(r'^[a-zA-Z0-9\s\-_]+$').hasMatch(value.trim())) {
-      return 'Project name can only contain letters, numbers, spaces, hyphens, and underscores';
-    }
-    return null; // Validation passed
-  }
-
-  /// Validates project description input
-  /// Ensures description does not exceed 500 characters
-  /// Description is optional, so null/empty values are allowed
-  String? _validateProjectDescription(String? value) {
-    if (value != null && value.trim().length > 500) {
-      return 'Description must not exceed 500 characters';
-    }
-    return null; // Validation passed
   }
 
   /// Displays error message in a snackbar
@@ -233,7 +202,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                       const SizedBox(height: 24),
                       TextFormField(
                         controller: projectNameController,
-                        validator: _validateProjectName,
+                        validator: Project.validateName,
                         decoration: InputDecoration(
                           labelText: 'Project Name *',
                           hintText: 'Enter project name',
@@ -258,10 +227,10 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                       const SizedBox(height: 20),
                       TextFormField(
                         controller: projectDescriptionController,
-                        validator: _validateProjectDescription,
+                        validator: Project.validateDescription,
                         decoration: InputDecoration(
-                          labelText: 'Project Description',
-                          hintText: 'Enter project description (optional)',
+                          labelText: 'Project Description *',
+                          hintText: 'Enter project description',
                           prefixIcon: const Icon(Icons.description),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),

@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:task_management/data/task_store.dart';
 import 'package:task_management/data/task_store_in_memory.dart';
 import 'package:task_management/models/task.dart';
-import 'package:task_management/models/task_list_notifier.dart';
+import 'package:task_management/provider/task_list_notifier.dart';
 
 void main() {
   group('TaskListNotifier', () {

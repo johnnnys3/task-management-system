@@ -3,6 +3,9 @@ import 'package:logging/logging.dart';
 import 'package:task_management/models/task.dart';
 import 'package:task_management/data/database_helper(task).dart';
 import 'package:task_management/data/task_store.dart';
+import 'package:task_management/data/task_query.dart';
+
+export 'package:task_management/data/task_query.dart' show TaskSortOption;
 
 /// Manages the state of a list of tasks with CRUD operations and filtering
 class TaskListNotifier extends ChangeNotifier {
@@ -15,26 +18,20 @@ class TaskListNotifier extends ChangeNotifier {
   List<Task> _filteredTasks = [];
   bool _isLoading = false;
   String? _error;
-  String _searchQuery = '';
-  TaskStatus? _statusFilter;
-  TaskPriority? _priorityFilter;
-  DateTime? _dueDateFilter;
-  String? _assignedToFilter;
-  TaskSortOption _sortOption = TaskSortOption.dueDate;
-  bool _sortAscending = true;
+  TaskQuery _query = const TaskQuery();
 
   // Getters
   List<Task> get tasks => List.unmodifiable(_tasks);
   List<Task> get filteredTasks => List.unmodifiable(_filteredTasks);
   bool get isLoading => _isLoading;
   String? get error => _error;
-  String get searchQuery => _searchQuery;
-  TaskStatus? get statusFilter => _statusFilter;
-  TaskPriority? get priorityFilter => _priorityFilter;
-  DateTime? get dueDateFilter => _dueDateFilter;
-  String? get assignedToFilter => _assignedToFilter;
-  TaskSortOption get sortOption => _sortOption;
-  bool get sortAscending => _sortAscending;
+  String get searchQuery => _query.searchQuery;
+  TaskStatus? get statusFilter => _query.statusFilter;
+  TaskPriority? get priorityFilter => _query.priorityFilter;
+  DateTime? get dueDateFilter => _query.dueDateFilter;
+  String? get assignedToFilter => _query.assignedToFilter;
+  TaskSortOption get sortOption => _query.sortOption;
+  bool get sortAscending => _query.sortAscending;
 
   // Computed properties
   int get taskCount => _tasks.length;
@@ -195,54 +192,49 @@ class TaskListNotifier extends ChangeNotifier {
 
   /// Sets search query and applies filters
   void setSearchQuery(String query) {
-    _searchQuery = query.toLowerCase().trim();
+    _query = _query.copyWith(searchQuery: query.toLowerCase().trim());
     _applyFiltersAndSort();
   }
 
   /// Sets status filter
   void setStatusFilter(TaskStatus? status) {
-    _statusFilter = status;
+    _query = _query.copyWith(statusFilter: status, clearStatusFilter: status == null);
     _applyFiltersAndSort();
   }
 
   /// Sets priority filter
   void setPriorityFilter(TaskPriority? priority) {
-    _priorityFilter = priority;
+    _query = _query.copyWith(priorityFilter: priority, clearPriorityFilter: priority == null);
     _applyFiltersAndSort();
   }
 
   /// Sets due date filter
   void setDueDateFilter(DateTime? date) {
-    _dueDateFilter = date;
+    _query = _query.copyWith(dueDateFilter: date, clearDueDateFilter: date == null);
     _applyFiltersAndSort();
   }
 
   /// Sets assigned to filter
   void setAssignedToFilter(String? userId) {
-    _assignedToFilter = userId;
+    _query = _query.copyWith(assignedToFilter: userId, clearAssignedToFilter: userId == null);
     _applyFiltersAndSort();
   }
 
   /// Clears all filters
   void clearFilters() {
-    _searchQuery = '';
-    _statusFilter = null;
-    _priorityFilter = null;
-    _dueDateFilter = null;
-    _assignedToFilter = null;
+    _query = TaskQuery(sortOption: _query.sortOption, sortAscending: _query.sortAscending);
     _applyFiltersAndSort();
   }
 
   /// Sets sort option
   void setSortOption(TaskSortOption option, {bool? ascending}) {
-    _sortOption = option;
-    _sortAscending = ascending ?? _sortAscending;
+    _query = _query.copyWith(sortOption: option, sortAscending: ascending ?? _query.sortAscending);
     _applyFiltersAndSort();
   }
 
   /// Toggles sort direction
   void toggleSortDirection() {
-    _sortAscending = !_sortAscending;
+    _query = _query.copyWith(sortAscending: !_query.sortAscending);
     _applyFiltersAndSort();
   }
 
@@ -261,118 +253,8 @@ class TaskListNotifier extends ChangeNotifier {
 
   /// Applies all filters and sorting to the task list
   void _applyFiltersAndSort() {
-    _filteredTasks = List.from(_tasks);
-
-    // Apply search filter
-    if (_searchQuery.isNotEmpty) {
-      _filteredTasks = _filteredTasks.where((task) =>
-          task.title.toLowerCase().contains(_searchQuery) ||
-          task.description.toLowerCase().contains(_searchQuery)
-      ).toList();
-    }
-
-    // Apply status filter
-    if (_statusFilter != null) {
-      _filteredTasks = _filteredTasks.where((task) =>
-          task.status == _statusFilter
-      ).toList();
-    }
-
-    // Apply priority filter
-    if (_priorityFilter != null) {
-      _filteredTasks = _filteredTasks.where((task) =>
-          task.priority == _priorityFilter
-      ).toList();
-    }
-
-    // Apply due date filter
-    if (_dueDateFilter != null) {
-      final filterDate = DateTime(_dueDateFilter!.year, _dueDateFilter!.month, _dueDateFilter!.day);
-      _filteredTasks = _filteredTasks.where((task) {
-        if (task.dueDate == null) return false;
-        final taskDate = DateTime(task.dueDate!.year, task.dueDate!.month, task.dueDate!.day);
-        return taskDate.isAtSameMomentAs(filterDate);
-      }).toList();
-    }
-
-    // Apply assigned to filter
-    if (_assignedToFilter != null) {
-      _filteredTasks = _filteredTasks.where((task) =>
-          task.assignedTo == _assignedToFilter
-      ).toList();
-    }
-
-    // Apply sorting
-    _sortTasks();
+    _filteredTasks = _query.apply(_tasks);
     notifyListeners();
-  }
-
-  /// Sorts the filtered tasks based on the current sort option
-  void _sortTasks() {
-    _filteredTasks.sort((a, b) {
-      int comparison = 0;
-      
-      switch (_sortOption) {
-        case TaskSortOption.title:
-          comparison = a.title.toLowerCase().compareTo(b.title.toLowerCase());
-          break;
-        case TaskSortOption.dueDate:
-          if (a.dueDate == null && b.dueDate == null) {
-            comparison = 0;
-          } else if (a.dueDate == null) {
-            comparison = 1;
-          } else if (b.dueDate == null) {
-            comparison = -1;
-          } else {
-            comparison = a.dueDate!.compareTo(b.dueDate!);
-          }
-          break;
-        case TaskSortOption.priority:
-          comparison = _getPriorityValue(a.priority).compareTo(_getPriorityValue(b.priority));
-          break;
-        case TaskSortOption.status:
-          comparison = a.status.index.compareTo(b.status.index);
-          break;
-        case TaskSortOption.createdAt:
-          if (a.createdAt == null && b.createdAt == null) {
-            comparison = 0;
-          } else if (a.createdAt == null) {
-            comparison = 1;
-          } else if (b.createdAt == null) {
-            comparison = -1;
-          } else {
-            comparison = a.createdAt!.compareTo(b.createdAt!);
-          }
-          break;
-        case TaskSortOption.updatedAt:
-          if (a.updatedAt == null && b.updatedAt == null) {
-            comparison = 0;
-          } else if (a.updatedAt == null) {
-            comparison = 1;
-          } else if (b.updatedAt == null) {
-            comparison = -1;
-          } else {
-            comparison = a.updatedAt!.compareTo(b.updatedAt!);
-          }
-          break;
-      }
-      
-      return _sortAscending ? comparison : -comparison;
-    });
-  }
-
-  /// Gets numeric value for priority sorting
-  int _getPriorityValue(TaskPriority priority) {
-    switch (priority) {
-      case TaskPriority.low:
-        return 0;
-      case TaskPriority.medium:
-        return 1;
-      case TaskPriority.high:
-        return 2;
-      case TaskPriority.urgent:
-        return 3;
-    }
   }
 
   /// Validates task before adding/updating
@@ -416,14 +298,4 @@ class TaskListNotifier extends ChangeNotifier {
     _logger.info('TaskListNotifier disposed');
     super.dispose();
   }
-}
-
-/// Enum for task sorting options
-enum TaskSortOption {
-  title,
-  dueDate,
-  priority,
-  status,
-  createdAt,
-  updatedAt,
 }

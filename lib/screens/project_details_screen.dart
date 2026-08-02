@@ -2,11 +2,12 @@
 /// Provides project management features including editing, task viewing, and status updates
 /// Includes real-time data fetching and error handling
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:task_management/models/project.dart';
 import 'package:intl/intl.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:task_management/models/task.dart';
 import 'package:task_management/data/database_helper(task).dart';
+import 'package:task_management/data/project_store.dart';
 import 'package:task_management/screens/task_details_screen.dart';
 
 class ProjectDetailsScreen extends StatefulWidget {
@@ -34,9 +35,12 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   late TextEditingController _descriptionController;
   late TextEditingController _dueDateController;
 
+  late final ProjectStore _projectStore;
+
   @override
   void initState() {
     super.initState();
+    _projectStore = context.read<ProjectStore>();
     // Initialize project data and controllers
     project = widget.project;
     _initializeControllers();
@@ -64,33 +68,23 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     super.dispose();
   }
 
-  /// Fetches detailed project information from Firestore
+  /// Fetches detailed project information via ProjectStore
   /// Updates project description and handles errors gracefully
   Future<void> _fetchProjectDetails() async {
     try {
-      // Fetch project document from Firestore
-      final DocumentSnapshot<Map<String, dynamic>> projectSnapshot =
-          await FirebaseFirestore.instance.collection('projects').doc(project.id).get();
+      // ponytail: ProjectStore has no get-by-id; fetch and find locally. Add
+      // a dedicated lookup if this ever needs to scale past a small project list.
+      final projects = await _projectStore.fetch();
+      final matches = projects.where((p) => p.id == project.id);
+      final fetched = matches.isEmpty ? null : matches.first;
 
-      if (projectSnapshot.exists) {
-        final data = projectSnapshot.data()!;
-        if (mounted) {
-          setState(() {
-            projectDescription = data['description'] ?? '';
-            // Update project object with fetched data
-            project = Project(
-              id: project.id,
-              name: data['name'] ?? project.name,
-              description: projectDescription,
-              dueDate: (data['dueDate'] as Timestamp?)?.toDate() ?? project.dueDate,
-              tasks: project.tasks,
-              isCompleted: data['isCompleted'] ?? project.isCompleted,
-              createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? project.createdAt,
-            );
-            // Update controllers with fresh data
-            _descriptionController.text = projectDescription;
-          });
-        }
+      if (fetched != null && mounted) {
+        setState(() {
+          projectDescription = fetched.description;
+          project = fetched;
+          // Update controllers with fresh data
+          _descriptionController.text = projectDescription;
+        });
       }
     } catch (error) {
       if (mounted) {
@@ -732,32 +726,20 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
       setState(() {
         _isLoading = true;
       });
-      
-      // Update project in Firestore
-      await FirebaseFirestore.instance
-          .collection('projects')
-          .doc(project.id)
-          .update({
-            'name': _nameController.text.trim(),
-            'description': _descriptionController.text.trim(),
-            'dueDate': Timestamp.fromDate(
-              DateFormat('yyyy-MM-dd').parse(_dueDateController.text)
-            ),
-            'updatedAt': Timestamp.now(),
-          });
-      
+
+      // Update project via ProjectStore
+      final updatedProject = project.copyWith(
+        name: _nameController.text.trim(),
+        description: _descriptionController.text.trim(),
+        dueDate: DateFormat('yyyy-MM-dd').parse(_dueDateController.text),
+        updatedAt: DateTime.now(),
+      );
+      await _projectStore.update(updatedProject);
+
       // Update local project object
       setState(() {
-        project = Project(
-          id: project.id,
-          name: _nameController.text.trim(),
-          description: _descriptionController.text.trim(),
-          dueDate: DateFormat('yyyy-MM-dd').parse(_dueDateController.text),
-          tasks: project.tasks,
-          isCompleted: project.isCompleted,
-          createdAt: project.createdAt,
-        );
-        projectDescription = _descriptionController.text.trim();
+        project = updatedProject;
+        projectDescription = updatedProject.description;
         _isEditing = false;
         _isLoading = false;
       });
@@ -809,13 +791,10 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
       setState(() {
         _isLoading = true;
       });
-      
-      // Delete project from Firestore
-      await FirebaseFirestore.instance
-          .collection('projects')
-          .doc(project.id)
-          .delete();
-      
+
+      // Delete project via ProjectStore
+      await _projectStore.delete(project.id);
+
       _showSuccessSnackBar('Project deleted successfully');
       
       // Navigate back to project list

@@ -318,6 +318,16 @@ class Project {
     return null;
   }
 
+  /// Validates the project, consolidating [validateName], [validateDescription]
+  /// and [validateDueDate]. Returns the list of failure messages (empty if valid).
+  List<String> validate() {
+    return [
+      validateName(name),
+      validateDescription(description),
+      validateDueDate(dueDate),
+    ].whereType<String>().toList();
+  }
+
   /// Checks if the project is overdue
   bool get isOverdue => !isCompleted && dueDate.isBefore(DateTime.now());
 

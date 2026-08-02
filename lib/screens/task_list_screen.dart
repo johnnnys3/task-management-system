@@ -389,10 +389,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
   Widget _buildTaskStatistics() {
     final completedCount = _tasks.where((task) => task.isCompleted).length;
     final pendingCount = _tasks.where((task) => !task.isCompleted).length;
-    final overdueCount = _tasks.where((task) => 
-        !task.isCompleted && 
-        task.hasDueDate && 
-        task.dueDate != null && task.dueDate!.isBefore(DateTime.now())).length;
+    final overdueCount = _tasks.where((task) => task.isOverdue).length;
     
     return Container(
       padding: const EdgeInsets.all(16),
@@ -916,10 +913,8 @@ class TaskListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isOverdue = !task.isCompleted && 
-                     task.hasDueDate && 
-                     task.dueDate != null && task.dueDate!.isBefore(DateTime.now());
-    
+    final isOverdue = task.isOverdue;
+
     return Card(
       elevation: 3,
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),

@@ -4,9 +4,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import 'package:task_management/data/project_store.dart';
 import 'package:task_management/data/task_store.dart';
 import 'package:task_management/models/project.dart';
 import 'package:task_management/models/task.dart';
+import 'package:task_management/widgets/entity_form_scaffold.dart';
 
 /// Fetches the list of assignable member names.
 typedef MemberFetcher = Future<List<String>> Function();
@@ -62,11 +64,11 @@ class _CreateTaskState extends State<CreateTask> {
   final List<String> _categories = ['Work', 'Personal', 'Shopping', 'Health', 'Other'];
   String _selectedCategory = 'Work';
   
-  // Firestore references (users/projects aren't covered by TaskStore)
+  // Firestore reference (users aren't covered by TaskStore)
   final CollectionReference _usersCollection = FirebaseFirestore.instance.collection('users');
-  final CollectionReference _projectsCollection = FirebaseFirestore.instance.collection('projects');
 
   late final TaskStore _taskStore;
+  late final ProjectStore _projectStore;
   late final MemberFetcher _memberFetcher;
   late final ProjectFetcher _projectFetcher;
 
@@ -74,8 +76,9 @@ class _CreateTaskState extends State<CreateTask> {
   void initState() {
     super.initState();
     _taskStore = context.read<TaskStore>();
+    _projectStore = context.read<ProjectStore>();
     _memberFetcher = widget.memberFetcher ?? _fetchMembersFromFirestore;
-    _projectFetcher = widget.projectFetcher ?? _fetchProjectsFromFirestore;
+    _projectFetcher = widget.projectFetcher ?? _projectStore.fetch;
     _fetchMembers();
     _initializeDefaultValues();
   }
@@ -146,136 +149,31 @@ class _CreateTaskState extends State<CreateTask> {
   /// Creates modern form with validation and error handling
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      // Modern app bar with save action
-      appBar: _buildAppBar(context),
-      // Main content with loading overlay
-      body: Stack(
-        children: [
-          // Form content
-          _buildFormContent(),
-          // Loading overlay
-          if (_isLoading) _buildLoadingOverlay(),
-        ],
-      ),
-    );
-  }
-
-  /// Builds modern app bar
-  /// Includes title, save action, and validation feedback
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    return AppBar(
-      title: const Text(
-        'Create Task',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      backgroundColor: Theme.of(context).primaryColor,
-      elevation: 0,
-      actions: [
-        // Save button
-        TextButton(
-          onPressed: _canCreateTask() ? _createTask : null,
-          child: const Text(
-            'Save',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
+    return EntityFormScaffold(
+      title: 'Create Task',
+      formKey: _formKey,
+      isLoading: _isLoading,
+      loadingMessage: 'Creating task...',
+      errorMessage: _errorMessage,
+      onDismissError: () => setState(() => _errorMessage = ''),
+      onSave: _canCreateTask() ? _createTask : null,
+      saveTooltip: 'Save',
+      children: [
+        // Task information card
+        _buildTaskInformationCard(),
+        const SizedBox(height: 16),
+        // Task details card
+        _buildTaskDetailsCard(),
+        const SizedBox(height: 16),
+        // Assignment card
+        _buildAssignmentCard(),
+        const SizedBox(height: 16),
+        // Project card
+        _buildProjectCard(),
+        const SizedBox(height: 24),
+        // Create button
+        _buildCreateButton(),
       ],
-    );
-  }
-
-  /// Builds main form content
-  /// Creates scrollable form with all task fields
-  Widget _buildFormContent() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Error message display
-            if (_errorMessage.isNotEmpty) _buildErrorMessage(),
-            // Task information card
-            _buildTaskInformationCard(),
-            const SizedBox(height: 16),
-            // Task details card
-            _buildTaskDetailsCard(),
-            const SizedBox(height: 16),
-            // Assignment card
-            _buildAssignmentCard(),
-            const SizedBox(height: 16),
-            // Project card
-            _buildProjectCard(),
-            const SizedBox(height: 24),
-            // Create button
-            _buildCreateButton(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Builds error message widget
-  /// Shows error with dismiss option
-  Widget _buildErrorMessage() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        border: Border.all(color: Colors.red.shade200),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline, color: Colors.red.shade700),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              _errorMessage,
-              style: TextStyle(color: Colors.red.shade700),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () {
-              setState(() {
-                _errorMessage = '';
-              });
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Builds loading overlay
-  /// Shows loading indicator during operations
-  Widget _buildLoadingOverlay() {
-    return Container(
-      color: Colors.black.withOpacity(0.5),
-      child: const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Creating task...'),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -675,26 +573,6 @@ class _CreateTaskState extends State<CreateTask> {
     );
   }
 
-  /// Fetches the raw project list from Firestore's projects collection.
-  Future<List<Project>> _fetchProjectsFromFirestore() async {
-    final QuerySnapshot result = await _projectsCollection.get();
-    final List<DocumentSnapshot> documents = result.docs;
-
-    return documents.map((doc) {
-      final Timestamp? dueDateTimestamp = doc['dueDate'] as Timestamp?;
-      final DateTime dueDate = dueDateTimestamp?.toDate() ?? DateTime.now();
-
-      return Project(
-        id: doc.id,
-        name: doc['name'] ?? '',
-        description: doc['description'] ?? '',
-        dueDate: dueDate,
-        tasks: [],
-        isCompleted: false,
-      );
-    }).toList();
-  }
-
   /// Fetches available projects via the configured project fetcher
   /// Returns list of projects for selection
   Future<List<Project>> _fetchAvailableProjects() async {
@@ -770,15 +648,16 @@ class _CreateTaskState extends State<CreateTask> {
   /// Maintains project-task relationship
   Future<void> _updateProjectTask(String projectId, String taskTitle) async {
     try {
-      await _projectsCollection.doc(projectId).update({
-        'tasks': FieldValue.arrayUnion([
-          {
-            'title': taskTitle,
-            'projectId': projectId,
-            'createdAt': FieldValue.serverTimestamp(),
-          }
-        ]),
-      });
+      final projects = await _projectFetcher();
+      final project = projects.firstWhere((p) => p.id == projectId);
+      final projectTask = Task(
+        id: DateTime.now().toIso8601String(),
+        title: taskTitle,
+        description: '',
+      );
+      await _projectStore.update(
+        project.copyWith(tasks: [...project.tasks, projectTask]),
+      );
     } catch (e) {
       // Log error but don't fail task creation
       print('Error updating project task: $e');

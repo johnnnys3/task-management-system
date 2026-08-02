@@ -9,9 +9,11 @@ import 'package:logging/logging.dart';
 import 'package:task_management/authentication/authentication_service.dart';
 import 'package:task_management/authentication/firebase_config.dart';
 import 'package:task_management/authentication/user.dart';
+import 'package:task_management/data/database_helper(project).dart';
 import 'package:task_management/data/database_helper(task).dart';
+import 'package:task_management/data/project_store.dart';
 import 'package:task_management/data/task_store.dart';
-import 'package:task_management/models/task_list_notifier.dart';
+import 'package:task_management/provider/task_list_notifier.dart';
 import 'package:task_management/screens/home_screen.dart';
 import 'package:task_management/screens/login_screen.dart';
 
@@ -100,6 +102,12 @@ class TaskManagementApp extends StatelessWidget {
         // Tests bypass main() entirely and inject InMemoryTaskStore directly.
         Provider<TaskStore>(
           create: (context) => TaskDatabase(),
+          lazy: true,
+        ),
+        // Project data access, concrete adapter chosen once here at the root.
+        // Tests bypass main() entirely and inject InMemoryProjectStore directly.
+        Provider<ProjectStore>(
+          create: (context) => ProjectDatabase(),
           lazy: true,
         ),
         // Task list notifier provider

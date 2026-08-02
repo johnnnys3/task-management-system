@@ -2,12 +2,13 @@
 /// Provides CRUD operations, filtering, and project analytics
 /// Includes role-based access control and modern UI design
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:task_management/authentication/user.dart';
+import 'package:task_management/data/project_store.dart';
 import 'package:task_management/models/project.dart' as TaskProject;
 import 'package:task_management/screens/project_details_screen.dart';
 import 'package:task_management/screens/create_project_screen.dart';
 import 'package:task_management/screens/update_project_screen.dart';
-import 'package:task_management/service/project_service.dart';
 import 'package:intl/intl.dart';
 
 class ProjectManagementScreen extends StatefulWidget {
@@ -41,12 +42,15 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
   // Controller for search
   final TextEditingController _searchController = TextEditingController();
 
+  late final ProjectStore _projectStore;
+
   @override
   bool get wantKeepAlive => true; // Keep widget alive when switching tabs
 
   @override
   void initState() {
     super.initState();
+    _projectStore = context.read<ProjectStore>();
     _initializeData();
     // Listen to search controller changes
     _searchController.addListener(_onSearchChanged);
@@ -69,10 +73,8 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
   /// Updates state with fetched projects or error message
   Future<void> loadProjects() async {
     try {
-      final projectService = ProjectService();
-      final loadedProjects = (await projectService.getProjects(userId: widget.userId))
-          .cast<TaskProject.Project>();
-      
+      final loadedProjects = await _projectStore.fetch();
+
       if (mounted) {
         setState(() {
           projects = loadedProjects;
@@ -646,11 +648,7 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
   /// Removes project and updates UI
   Future<void> _deleteProject(TaskProject.Project project) async {
     try {
-      final projectService = ProjectService();
-      await projectService.deleteProject(
-        projectId: project.id, 
-        userId: widget.userId
-      );
+      await _projectStore.delete(project.id);
 
       setState(() {
         projects.remove(project);

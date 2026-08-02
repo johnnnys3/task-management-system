@@ -3,8 +3,10 @@
 /// Includes form validation, error handling, and user feedback
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:task_management/data/database_helper(project).dart';
+import 'package:provider/provider.dart';
+import 'package:task_management/data/project_store.dart';
 import 'package:task_management/models/project.dart';
+import 'package:task_management/widgets/entity_form_scaffold.dart';
 
 class UpdateProjectScreen extends StatefulWidget {
   /// Project to be updated
@@ -41,9 +43,12 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
   final FocusNode _nameFocusNode = FocusNode();
   final FocusNode _descriptionFocusNode = FocusNode();
 
+  late final ProjectStore _projectStore;
+
   @override
   void initState() {
     super.initState();
+    _projectStore = context.read<ProjectStore>();
     // Initialize form with existing project details
     _initializeForm();
   }
@@ -97,7 +102,7 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
       );
 
       // Update project in database
-      await ProjectDatabase().updateProject(updatedProject);
+      await _projectStore.update(updatedProject);
 
       // Show success message and navigate back
       _showSuccessSnackBar('Project updated successfully');
@@ -140,136 +145,34 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      // Modern app bar with loading indicator
-      appBar: _buildAppBar(),
-      // Main content with loading overlay
-      body: Stack(
-        children: [
-          // Form content
-          _buildForm(),
-          // Loading overlay
-          if (_isLoading) _buildLoadingOverlay(),
-        ],
-      ),
-      // Bottom action buttons
+    return EntityFormScaffold(
+      title: 'Update Project',
+      formKey: _formKey,
+      isLoading: _isLoading,
+      loadingMessage: 'Updating project...',
+      errorMessage: _errorMessage,
+      onDismissError: () => setState(() => _errorMessage = ''),
+      onSave: _updateProject,
+      saveTooltip: 'Save Project',
       bottomNavigationBar: _buildBottomActions(),
-    );
-  }
-
-  /// Builds modern app bar
-  /// Includes title, actions, and loading indicator
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      title: const Text(
-        'Update Project',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      backgroundColor: Theme.of(context).primaryColor,
-      elevation: 0,
-      actions: [
-        // Save action
-        if (!_isLoading)
-          IconButton(
-            onPressed: _updateProject,
-            icon: const Icon(Icons.save),
-            tooltip: 'Save Project',
-          ),
+      children: [
+        const SizedBox(height: 16),
+        // Project name field
+        _buildNameField(),
+        const SizedBox(height: 24),
+        // Project description field
+        _buildDescriptionField(),
+        const SizedBox(height: 24),
+        // Due date picker
+        _buildDueDateField(),
+        const SizedBox(height: 24),
+        // Completion status toggle
+        _buildCompletionToggle(),
+        const SizedBox(height: 32),
+        // Project statistics
+        _buildProjectStatistics(),
+        const SizedBox(height: 100), // Space for bottom navigation
       ],
-    );
-  }
-
-  /// Builds main form content
-  /// Creates scrollable form with validation
-  Widget _buildForm() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Error message display
-            if (_errorMessage.isNotEmpty) _buildErrorMessage(),
-            const SizedBox(height: 16),
-            // Project name field
-            _buildNameField(),
-            const SizedBox(height: 24),
-            // Project description field
-            _buildDescriptionField(),
-            const SizedBox(height: 24),
-            // Due date picker
-            _buildDueDateField(),
-            const SizedBox(height: 24),
-            // Completion status toggle
-            _buildCompletionToggle(),
-            const SizedBox(height: 32),
-            // Project statistics
-            _buildProjectStatistics(),
-            const SizedBox(height: 100), // Space for bottom navigation
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Builds error message widget
-  /// Shows error with dismiss option
-  Widget _buildErrorMessage() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        border: Border.all(color: Colors.red.shade200),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline, color: Colors.red.shade700),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              _errorMessage,
-              style: TextStyle(color: Colors.red.shade700),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () {
-              setState(() {
-                _errorMessage = '';
-              });
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Builds loading overlay
-  /// Shows loading indicator during operations
-  Widget _buildLoadingOverlay() {
-    return Container(
-      color: Colors.black.withOpacity(0.5),
-      child: const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Updating project...'),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 
