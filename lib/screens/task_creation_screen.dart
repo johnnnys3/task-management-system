@@ -4,17 +4,33 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import 'package:task_management/data/task_store.dart';
 import 'package:task_management/models/project.dart';
 import 'package:task_management/models/task.dart';
-import 'package:task_management/models/task_list_notifier.dart';
+
+/// Fetches the list of assignable member names.
+typedef MemberFetcher = Future<List<String>> Function();
+
+/// Fetches the list of projects available for assignment.
+typedef ProjectFetcher = Future<List<Project>> Function();
 
 class CreateTask extends StatefulWidget {
   /// List of available projects for task assignment
   final List<String> availableProjects;
 
+  /// Source for the member picker. Defaults to a Firestore-backed fetch;
+  /// tests can override this to avoid depending on Firestore.
+  final MemberFetcher? memberFetcher;
+
+  /// Source for the project picker. Defaults to a Firestore-backed fetch;
+  /// tests can override this to avoid depending on Firestore.
+  final ProjectFetcher? projectFetcher;
+
   const CreateTask({
     Key? key,
     required this.availableProjects,
+    this.memberFetcher,
+    this.projectFetcher,
   }) : super(key: key);
 
   @override
@@ -46,14 +62,20 @@ class _CreateTaskState extends State<CreateTask> {
   final List<String> _categories = ['Work', 'Personal', 'Shopping', 'Health', 'Other'];
   String _selectedCategory = 'Work';
   
-  // Firestore references
-  final CollectionReference _tasksCollection = FirebaseFirestore.instance.collection('tasks');
+  // Firestore references (users/projects aren't covered by TaskStore)
   final CollectionReference _usersCollection = FirebaseFirestore.instance.collection('users');
   final CollectionReference _projectsCollection = FirebaseFirestore.instance.collection('projects');
+
+  late final TaskStore _taskStore;
+  late final MemberFetcher _memberFetcher;
+  late final ProjectFetcher _projectFetcher;
 
   @override
   void initState() {
     super.initState();
+    _taskStore = context.read<TaskStore>();
+    _memberFetcher = widget.memberFetcher ?? _fetchMembersFromFirestore;
+    _projectFetcher = widget.projectFetcher ?? _fetchProjectsFromFirestore;
     _fetchMembers();
     _initializeDefaultValues();
   }
@@ -75,7 +97,16 @@ class _CreateTaskState extends State<CreateTask> {
     });
   }
 
-  /// Fetches available team members from Firestore
+  /// Fetches the raw member list from Firestore's users collection.
+  Future<List<String>> _fetchMembersFromFirestore() async {
+    final QuerySnapshot usersSnapshot = await _usersCollection.get();
+    return usersSnapshot.docs
+        .map((doc) => (doc.data() as Map<String, dynamic>?)?['name']?.toString() ?? 'Unknown')
+        .where((name) => name.isNotEmpty && name != 'Unknown')
+        .toList();
+  }
+
+  /// Fetches available team members via the configured member fetcher
   /// Updates member list for assignment options
   Future<void> _fetchMembers() async {
     try {
@@ -83,15 +114,10 @@ class _CreateTaskState extends State<CreateTask> {
         _isLoading = true;
         _errorMessage = '';
       });
-      
-      final QuerySnapshot usersSnapshot = await _usersCollection.get();
-      
-      if (usersSnapshot.docs.isNotEmpty) {
-        final List<String> users = usersSnapshot.docs
-            .map((doc) => (doc.data() as Map<String, dynamic>?)?['name']?.toString() ?? 'Unknown')
-            .where((name) => name.isNotEmpty && name != 'Unknown')
-            .toList();
-        
+
+      final users = await _memberFetcher();
+
+      if (users.isNotEmpty) {
         if (mounted) {
           setState(() {
             _memberList = users;
@@ -649,28 +675,31 @@ class _CreateTaskState extends State<CreateTask> {
     );
   }
 
-  /// Fetches available projects from Firestore
+  /// Fetches the raw project list from Firestore's projects collection.
+  Future<List<Project>> _fetchProjectsFromFirestore() async {
+    final QuerySnapshot result = await _projectsCollection.get();
+    final List<DocumentSnapshot> documents = result.docs;
+
+    return documents.map((doc) {
+      final Timestamp? dueDateTimestamp = doc['dueDate'] as Timestamp?;
+      final DateTime dueDate = dueDateTimestamp?.toDate() ?? DateTime.now();
+
+      return Project(
+        id: doc.id,
+        name: doc['name'] ?? '',
+        description: doc['description'] ?? '',
+        dueDate: dueDate,
+        tasks: [],
+        isCompleted: false,
+      );
+    }).toList();
+  }
+
+  /// Fetches available projects via the configured project fetcher
   /// Returns list of projects for selection
   Future<List<Project>> _fetchAvailableProjects() async {
     try {
-      final QuerySnapshot result = await _projectsCollection.get();
-      final List<DocumentSnapshot> documents = result.docs;
-
-      List<Project> projects = documents.map((doc) {
-        final Timestamp? dueDateTimestamp = doc['dueDate'] as Timestamp?;
-        final DateTime dueDate = dueDateTimestamp?.toDate() ?? DateTime.now();
-
-        return Project(
-          id: doc.id,
-          name: doc['name'] ?? '',
-          description: doc['description'] ?? '',
-          dueDate: dueDate,
-          tasks: [],
-          isCompleted: false,
-        );
-      }).toList();
-
-      return projects;
+      return await _projectFetcher();
     } catch (e) {
       setState(() {
         _errorMessage = 'Error fetching projects: ${e.toString()}';
@@ -679,7 +708,7 @@ class _CreateTaskState extends State<CreateTask> {
     }
   }
 
-  /// Creates new task in Firestore
+  /// Creates new task via TaskStore
   /// Validates form and saves task with proper error handling
   Future<void> _createTask() async {
     if (!_formKey.currentState!.validate()) {
@@ -718,15 +747,12 @@ class _CreateTaskState extends State<CreateTask> {
         isCompleted: false,
       );
 
-      // Save task to Firestore
-      await _tasksCollection.add(newTask.toMap());
-      
+      // Save task via TaskStore
+      await _taskStore.create(newTask);
+
       // Update project with new task
       await _updateProjectTask(_selectedProjectId!, newTask.title);
-      
-      // Update local state
-      Provider.of<TaskListNotifier>(context, listen: false).addTask(newTask);
-      
+
       // Show success message
       _showSuccessSnackBar('Task created successfully!');
       
