@@ -3,8 +3,9 @@
 /// Includes real-time updates and user interaction features
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:task_management/models/task.dart';
-import 'package:task_management/data/database_helper(task).dart';
+import 'package:task_management/data/task_store.dart';
 import 'task_details_screen.dart';
 
 /// Enum for notification types
@@ -94,7 +95,7 @@ class NotificationScreen extends StatefulWidget {
 
 class _NotificationScreenState extends State<NotificationScreen> {
   // State management
-  final TaskDatabase _taskDatabase = TaskDatabase();
+  late final TaskStore _taskStore;
   List<NotificationItem> _notifications = [];
   List<NotificationItem> _filteredNotifications = [];
   bool _isLoading = true;
@@ -105,6 +106,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   void initState() {
     super.initState();
+    _taskStore = context.read<TaskStore>();
     _loadNotifications();
   }
 
@@ -113,7 +115,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Future<void> _loadNotifications() async {
     try {
       // Fetch tasks from database
-      List<Task> tasks = await _taskDatabase.fetchTasks();
+      List<Task> tasks = await _taskStore.fetch();
       
       // Convert tasks to notification items
       final notifications = tasks.map((task) => NotificationItem.fromTask(task)).toList();

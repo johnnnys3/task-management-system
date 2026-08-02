@@ -3,7 +3,8 @@
 /// Includes real-time data updates and export functionality
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:task_management/data/database_helper(task).dart';
+import 'package:provider/provider.dart';
+import 'package:task_management/data/task_store.dart';
 import 'package:task_management/models/task.dart';
 
 class ReportingScreen extends StatefulWidget {
@@ -27,12 +28,12 @@ class _ReportingScreenState extends State<ReportingScreen> {
   int _overdueTasks = 0;
   double _completionRate = 0.0;
   
-  // Database instance
-  final TaskDatabase _taskDatabase = TaskDatabase();
+  late final TaskStore _taskStore;
 
   @override
   void initState() {
     super.initState();
+    _taskStore = context.read<TaskStore>();
     _fetchTasks();
   }
 
@@ -40,7 +41,7 @@ class _ReportingScreenState extends State<ReportingScreen> {
   /// Updates statistics and handles errors gracefully
   Future<void> _fetchTasks() async {
     try {
-      final tasks = await _taskDatabase.fetchTasks();
+      final tasks = await _taskStore.fetch();
       
       if (mounted) {
         setState(() {

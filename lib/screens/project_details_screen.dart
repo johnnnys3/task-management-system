@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:task_management/models/project.dart';
 import 'package:intl/intl.dart';
 import 'package:task_management/models/task.dart';
-import 'package:task_management/data/database_helper(task).dart';
+import 'package:task_management/data/task_store.dart';
 import 'package:task_management/data/project_store.dart';
 import 'package:task_management/screens/task_details_screen.dart';
 
@@ -36,11 +36,13 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   late TextEditingController _dueDateController;
 
   late final ProjectStore _projectStore;
+  late final TaskStore _taskStore;
 
   @override
   void initState() {
     super.initState();
     _projectStore = context.read<ProjectStore>();
+    _taskStore = context.read<TaskStore>();
     // Initialize project data and controllers
     project = widget.project;
     _initializeControllers();
@@ -101,7 +103,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   Future<void> _fetchRelatedTasks() async {
     try {
       // Fetch tasks from local database
-      final fetchedTasks = await TaskDatabase().fetchTasks();
+      final fetchedTasks = await _taskStore.fetch();
       
       // Filter tasks related to this project
       final projectTasks = fetchedTasks.where((task) => 

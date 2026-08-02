@@ -3,8 +3,9 @@
 /// Includes search history, suggestions, and result management
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:task_management/models/task.dart';
-import 'package:task_management/data/database_helper(task).dart';
+import 'package:task_management/data/task_store.dart';
 import 'task_details_screen.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -17,7 +18,7 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   // State variables
   final TextEditingController _searchController = TextEditingController();
-  final TaskDatabase _taskDatabase = TaskDatabase();
+  late final TaskStore _taskStore;
   List<Task> _allTasks = []; // All tasks for searching
   List<Task> _searchResults = []; // Filtered search results
   List<String> _searchHistory = []; // Search history
@@ -34,6 +35,7 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void initState() {
     super.initState();
+    _taskStore = context.read<TaskStore>();
     _loadTasks();
     _loadSearchHistory();
     // Listen to search controller changes
@@ -56,7 +58,7 @@ class _SearchScreenState extends State<SearchScreen> {
         _isLoading = true;
       });
       
-      final tasks = await _taskDatabase.fetchTasks();
+      final tasks = await _taskStore.fetch();
       
       if (mounted) {
         setState(() {

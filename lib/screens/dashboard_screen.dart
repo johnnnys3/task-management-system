@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:task_management/data/database_helper(task).dart';
+import 'package:provider/provider.dart';
+import 'package:task_management/data/task_store.dart';
 import 'package:task_management/models/task.dart';
 
 /// Enumeration for task filtering options
@@ -28,9 +29,12 @@ class _TaskStatsPageState extends State<TaskStatsPage> {
   TaskFilter _currentFilter = TaskFilter.all; // Currently active filter
   TaskSort _currentSort = TaskSort.dueDate; // Currently active sorting option
 
+  late final TaskStore _taskStore;
+
   @override
   void initState() {
     super.initState();
+    _taskStore = context.read<TaskStore>();
     _getTasks(); // Load tasks when screen initializes
   }
 
@@ -49,7 +53,7 @@ class _TaskStatsPageState extends State<TaskStatsPage> {
 
     try {
       // Fetch all tasks from database
-      final fetchedTasks = await TaskDatabase().fetchTasks();
+      final fetchedTasks = await _taskStore.fetch();
       if (mounted) {
         setState(() {
           tasks = fetchedTasks;

@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:provider/provider.dart';
 import 'package:task_management/models/task.dart';
-import 'package:task_management/data/database_helper(task).dart';
+import 'package:task_management/data/task_store.dart';
 
 
 
@@ -20,7 +21,7 @@ class TaskCalendar extends StatefulWidget {
 class _TaskCalendarState extends State<TaskCalendar> {
   // State variables
   DateTime _selectedDay = DateTime.now(); // Currently selected date in calendar
-  final TaskDatabase taskDatabase = TaskDatabase(); // Database instance for task operations
+  late final TaskStore _taskStore;
   List<Task>? _tasksForSelectedDay; // Tasks loaded for the selected day
   final Map<DateTime, List<Task>> _taskCache = {}; // Cache to store loaded tasks by date
   bool _isLoading = false; // Loading state indicator
@@ -28,6 +29,7 @@ class _TaskCalendarState extends State<TaskCalendar> {
   @override
   void initState() {
     super.initState();
+    _taskStore = context.read<TaskStore>();
     _loadTasksForSelectedDay(); // Load tasks for today when screen initializes
   }
 
@@ -50,7 +52,7 @@ class _TaskCalendarState extends State<TaskCalendar> {
 
     try {
       // Fetch tasks from database for the selected date
-      final tasks = await taskDatabase.fetchTasksForDate(_selectedDay);
+      final tasks = await _taskStore.fetch(date: _selectedDay);
       
       // Cache the results for future use
       _taskCache[_selectedDay] = tasks;
@@ -253,7 +255,7 @@ class TaskWidget extends StatelessWidget {
   void _handleMenuAction(BuildContext context, String action) {
     switch (action) {
       case 'toggle_complete':
-        _toggleTaskCompletion();
+        _toggleTaskCompletion(context);
         break;
       case 'edit':
         _editTask(context);
@@ -266,7 +268,7 @@ class TaskWidget extends StatelessWidget {
 
   /// Toggles task completion status
   /// Updates task in database and refreshes UI
-  Future<void> _toggleTaskCompletion() async {
+  Future<void> _toggleTaskCompletion(BuildContext context) async {
     try {
       // Create updated task with toggled completion status
       final updatedTask = task.copyWith(
@@ -275,7 +277,7 @@ class TaskWidget extends StatelessWidget {
       );
 
       // Update task in database
-      await TaskDatabase().updateTaskWithObject(updatedTask);
+      await context.read<TaskStore>().update(updatedTask);
       
       // Refresh task list to show updated status
       onTaskUpdated?.call();
@@ -387,7 +389,7 @@ class TaskWidget extends StatelessWidget {
                   );
 
                   // Update task in database
-                  await TaskDatabase().updateTaskWithObject(updatedTask);
+                  await context.read<TaskStore>().update(updatedTask);
                   
                   // Close dialog and refresh task list
                   if (context.mounted) {
@@ -443,7 +445,7 @@ class TaskWidget extends StatelessWidget {
     if (confirmed == true) {
       try {
         // Delete task from database
-        await TaskDatabase().deleteTask(task.id);
+        await context.read<TaskStore>().delete(task.id);
         
         // Show success message and refresh task list
         if (context.mounted) {
