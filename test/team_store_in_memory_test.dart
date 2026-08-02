@@ -28,6 +28,56 @@ void main() {
     });
   });
 
+  group('create', () {
+    test('assigns an id and stores the team', () async {
+      final store = InMemoryTeamStore();
+
+      final id = await store.create(buildTeam());
+      final teams = await store.fetch();
+
+      expect(teams.single.id, id);
+      expect(teams.single.name, 'Engineering');
+    });
+
+    test('throws TeamValidationException for an invalid team', () {
+      final store = InMemoryTeamStore();
+
+      expect(
+        () => store.create(buildTeam(name: '')),
+        throwsA(isA<TeamValidationException>()),
+      );
+    });
+  });
+
+  group('update', () {
+    test('replaces the stored team', () async {
+      final store = InMemoryTeamStore(teams: [buildTeam()]);
+
+      await store.update(buildTeam(name: 'Renamed'));
+      final teams = await store.fetch();
+
+      expect(teams.single.name, 'Renamed');
+    });
+
+    test('throws TeamNotFoundException for an unknown id', () {
+      final store = InMemoryTeamStore();
+
+      expect(
+        () => store.update(buildTeam()),
+        throwsA(isA<TeamNotFoundException>()),
+      );
+    });
+
+    test('throws TeamValidationException for an invalid team', () {
+      final store = InMemoryTeamStore(teams: [buildTeam()]);
+
+      expect(
+        () => store.update(buildTeam(name: '')),
+        throwsA(isA<TeamValidationException>()),
+      );
+    });
+  });
+
   group('delete', () {
     test('removes the team', () async {
       final store = InMemoryTeamStore(teams: [buildTeam()]);

@@ -322,6 +322,15 @@ class Team {
     return null;
   }
 
+  /// Validates the team, consolidating [validateName] and [validateDescription].
+  /// Returns the list of failure messages (empty if valid).
+  List<String> validate() {
+    return [
+      validateName(name),
+      validateDescription(description),
+    ].whereType<String>().toList();
+  }
+
   /// Checks if a user is a member of the team
   bool isMember(String userId) {
     return members.containsKey(userId);

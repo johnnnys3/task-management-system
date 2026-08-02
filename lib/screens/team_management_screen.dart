@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:task_management/data/team_store.dart';
 import 'package:task_management/models/team.dart';
+import 'package:task_management/screens/create_team_screen.dart';
+import 'package:task_management/screens/team_details_screen.dart';
 
 class TeamManagementScreen extends StatefulWidget {
   /// Current user ID for team operations
@@ -359,23 +361,26 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
 
   /// Navigates to team creation screen
   /// Opens team creation form
-  void _navigateToCreateTeam() {
-    // TODO: Navigate to team creation screen
-    _showSuccessSnackBar('Team creation not implemented yet');
+  Future<void> _navigateToCreateTeam() async {
+    final created = await Navigator.push<Team>(
+      context,
+      MaterialPageRoute(builder: (context) => CreateTeamScreen(userId: widget.userId)),
+    );
+    if (created != null) {
+      await _loadTeams();
+    }
   }
 
   /// Navigates to team details screen
-  /// Opens team details for viewing and editing
-  void _navigateToTeamDetails(Team team) {
-    // TODO: Navigate to team details screen
-    _showSuccessSnackBar('Team details not implemented yet');
-  }
-
-  /// Navigates to team update screen
-  /// Opens team update for modification
-  void _navigateToUpdateTeam(Team team) {
-    // TODO: Navigate to team update screen
-    _showSuccessSnackBar('Team update not implemented yet');
+  /// Opens team details for viewing, editing, and deleting
+  Future<void> _navigateToTeamDetails(Team team) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TeamDetailsScreen(team: team, isAdmin: widget.isAdmin),
+      ),
+    );
+    await _loadTeams();
   }
 
   /// Deletes team from database
@@ -460,7 +465,6 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
         return TeamListItem(
           team: team,
           onTap: () => _navigateToTeamDetails(team),
-          onUpdateTeam: widget.isAdmin ? () => _navigateToUpdateTeam(team) : null,
           onDeleteTeam: widget.isAdmin ? () => _deleteTeam(team) : null,
         );
       },
@@ -511,8 +515,6 @@ class TeamListItem extends StatelessWidget {
   final Team team;
   /// Callback for team tap
   final VoidCallback onTap;
-  /// Callback for team update
-  final VoidCallback? onUpdateTeam;
   /// Callback for team delete
   final VoidCallback? onDeleteTeam;
   /// Whether current user is team member
@@ -522,7 +524,6 @@ class TeamListItem extends StatelessWidget {
     Key? key,
     required this.team,
     required this.onTap,
-    this.onUpdateTeam,
     this.onDeleteTeam,
     this.isMember = false,
   }) : super(key: key);
@@ -636,22 +637,11 @@ class TeamListItem extends StatelessWidget {
                     ),
                   const SizedBox(width: 8),
                   // More options button
-                  if (onUpdateTeam != null || onDeleteTeam != null)
+                  if (onDeleteTeam != null)
                     PopupMenuButton<String>(
                       icon: const Icon(Icons.more_vert),
                       onSelected: (value) => _handleMenuAction(value),
                       itemBuilder: (context) => [
-                        if (onUpdateTeam != null)
-                          const PopupMenuItem(
-                            value: 'update',
-                            child: Row(
-                              children: [
-                                Icon(Icons.edit, size: 18),
-                                SizedBox(width: 8),
-                                Text('Update'),
-                              ],
-                            ),
-                          ),
                         if (onDeleteTeam != null)
                           const PopupMenuItem(
                             value: 'delete',
@@ -675,12 +665,9 @@ class TeamListItem extends StatelessWidget {
   }
 
   /// Handles menu action selection
-  /// Processes update and delete actions
+  /// Processes delete action
   void _handleMenuAction(String action) {
     switch (action) {
-      case 'update':
-        if (onUpdateTeam != null) onUpdateTeam!();
-        break;
       case 'delete':
         if (onDeleteTeam != null) onDeleteTeam!();
         break;

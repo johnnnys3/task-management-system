@@ -17,13 +17,25 @@ class TeamNotFoundException extends TeamStoreException {
       : super('Team not found: $teamId', code: 'team-not-found');
 }
 
+class TeamValidationException extends TeamStoreException {
+  TeamValidationException(String message)
+      : super(message, code: 'validation-error');
+}
+
 /// Single interface for all team data access, backed by whichever adapter
 /// (Firestore, in-memory, ...) is registered at the app root.
-///
-/// ponytail: scoped to what team_management_screen.dart actually calls today
-/// (fetch + delete). Create/update/stream are TODO-stubbed screens with no
-/// real caller yet — add them here when one exists to validate the shape.
 abstract class TeamStore {
+  /// Creates [team], returning its assigned id.
+  ///
+  /// Throws [TeamValidationException] if the team fails [Team.validate].
+  Future<String> create(Team team);
+
+  /// Updates an existing team.
+  ///
+  /// Throws [TeamNotFoundException] if no team with [Team.id] exists.
+  /// Throws [TeamValidationException] if the team fails [Team.validate].
+  Future<void> update(Team team);
+
   /// Fetches all teams.
   Future<List<Team>> fetch();
 

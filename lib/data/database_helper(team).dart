@@ -16,6 +16,53 @@ class TeamDatabase implements TeamStore {
       FirebaseFirestore.instance.collection('teams');
 
   @override
+  Future<String> create(Team team) async {
+    _checkValid(team);
+
+    try {
+      final docRef = await _teamsCollection.add({
+        ...team.toMap(),
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      _logger.info('Team created: ${docRef.id}');
+      return docRef.id;
+    } on FirebaseException catch (e) {
+      _logger.severe('Firebase error creating team', e);
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> update(Team team) async {
+    if (team.id.isEmpty) {
+      throw TeamValidationException('Team ID is required for update');
+    }
+    _checkValid(team);
+
+    try {
+      await _teamsCollection.doc(team.id).update({
+        ...team.toMap(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      _logger.info('Team updated: ${team.id}');
+    } on FirebaseException catch (e) {
+      if (e.code == 'not-found') {
+        throw TeamNotFoundException(team.id);
+      }
+      _logger.severe('Firebase error updating team', e);
+      rethrow;
+    }
+  }
+
+  void _checkValid(Team team) {
+    final errors = team.validate();
+    if (errors.isNotEmpty) {
+      throw TeamValidationException(errors.join('; '));
+    }
+  }
+
+  @override
   Future<List<Team>> fetch() async {
     try {
       final snapshot = await _teamsCollection.get();
