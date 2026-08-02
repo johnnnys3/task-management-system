@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:task_management/data/project_store.dart';
 import 'package:task_management/models/project.dart';
+import 'package:task_management/widgets/entity_form_scaffold.dart';
 
 class CreateProjectScreen extends StatefulWidget {
   const CreateProjectScreen({super.key});
@@ -18,7 +19,15 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
   DateTime selectedDueDate = DateTime.now();
   TimeOfDay selectedDueTime = TimeOfDay.now();
   bool _isLoading = false;
-  bool _autoValidate = false;
+  String _errorMessage = '';
+
+  late final ProjectStore _projectStore;
+
+  @override
+  void initState() {
+    super.initState();
+    _projectStore = context.read<ProjectStore>();
+  }
 
   @override
   void dispose() {
@@ -27,16 +36,14 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
     super.dispose();
   }
 
-  Future<void> _createProject(BuildContext context) async {
+  Future<void> _createProject() async {
     if (!_formKey.currentState!.validate()) {
-      setState(() {
-        _autoValidate = true;
-      });
       return;
     }
 
     setState(() {
       _isLoading = true;
+      _errorMessage = '';
     });
 
     try {
@@ -48,68 +55,26 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
         selectedDueTime.minute,
       );
 
-      Project newProject = Project(
+      final Project newProject = Project(
         name: projectNameController.text.trim(),
         description: projectDescriptionController.text.trim(),
         dueDate: combinedDueDate,
-        tasks: [],
+        tasks: const [],
         id: '',
         isCompleted: false,
       );
 
-      await context.read<ProjectStore>().create(newProject);
+      await _projectStore.create(newProject);
 
       if (mounted) {
         Navigator.pop(context, newProject);
       }
     } catch (e) {
-      if (mounted) {
-        _showErrorSnackbar(context, 'Failed to create project: ${e.toString()}');
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      setState(() {
+        _errorMessage = 'Failed to create project: ${e.toString()}';
+        _isLoading = false;
+      });
     }
-  }
-
-  /// Displays error message in a snackbar
-  /// Features:
-  /// - Hides any existing snackbars first
-  /// - Shows error icon with message
-  /// - Red background for error indication
-  /// - Auto-dismisses after 4 seconds
-  /// - Provides manual dismiss button
-  void _showErrorSnackbar(BuildContext context, String message) {
-    // Hide any existing snackbars to prevent overlap
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    
-    // Show new error snackbar with custom styling
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            // Error icon for visual indication
-            const Icon(Icons.error, color: Colors.white),
-            const SizedBox(width: 8),
-            // Error message text
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Colors.red[600], // Red background for errors
-        duration: const Duration(seconds: 4), // Auto-dismiss after 4 seconds
-        action: SnackBarAction(
-          label: 'Dismiss',
-          textColor: Colors.white,
-          onPressed: () {
-            // Manual dismiss action
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          },
-        ),
-      ),
-    );
   }
 
   /// Opens date and time picker for project due date
@@ -167,194 +132,146 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create Project'),
-        backgroundColor: Theme.of(context).primaryColor,
-        elevation: 0,
-        foregroundColor: Colors.white,
-      ),
-      body: Form(
-        key: _formKey,
-        autovalidateMode: _autoValidate ? AutovalidateMode.onUserInteraction : AutovalidateMode.disabled,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Card(
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+    return EntityFormScaffold(
+      title: 'Create Project',
+      formKey: _formKey,
+      isLoading: _isLoading,
+      loadingMessage: 'Creating project...',
+      errorMessage: _errorMessage,
+      onDismissError: () => setState(() => _errorMessage = ''),
+      onSave: _createProject,
+      saveTooltip: 'Save Project',
+      children: [
+        Card(
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Project Details',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).primaryColor,
+                  ),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Project Details',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
+                const SizedBox(height: 24),
+                TextFormField(
+                  controller: projectNameController,
+                  validator: Project.validateName,
+                  decoration: InputDecoration(
+                    labelText: 'Project Name *',
+                    hintText: 'Enter project name',
+                    prefixIcon: const Icon(Icons.title),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).primaryColor,
+                        width: 2,
+                      ),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Colors.red),
+                    ),
+                  ),
+                  textInputAction: TextInputAction.next,
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: projectDescriptionController,
+                  validator: Project.validateDescription,
+                  decoration: InputDecoration(
+                    labelText: 'Project Description *',
+                    hintText: 'Enter project description',
+                    prefixIcon: const Icon(Icons.description),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).primaryColor,
+                        width: 2,
+                      ),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Colors.red),
+                    ),
+                  ),
+                  maxLines: 3,
+                  textInputAction: TextInputAction.done,
+                ),
+                const SizedBox(height: 20),
+                InkWell(
+                  onTap: () => _selectDateTime(context),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Theme.of(context).primaryColor.withOpacity(0.5),
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.schedule,
                           color: Theme.of(context).primaryColor,
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                      TextFormField(
-                        controller: projectNameController,
-                        validator: Project.validateName,
-                        decoration: InputDecoration(
-                          labelText: 'Project Name *',
-                          hintText: 'Enter project name',
-                          prefixIcon: const Icon(Icons.title),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: Theme.of(context).primaryColor,
-                              width: 2,
-                            ),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: Colors.red),
-                          ),
-                        ),
-                        textInputAction: TextInputAction.next,
-                      ),
-                      const SizedBox(height: 20),
-                      TextFormField(
-                        controller: projectDescriptionController,
-                        validator: Project.validateDescription,
-                        decoration: InputDecoration(
-                          labelText: 'Project Description *',
-                          hintText: 'Enter project description',
-                          prefixIcon: const Icon(Icons.description),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: Theme.of(context).primaryColor,
-                              width: 2,
-                            ),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: Colors.red),
-                          ),
-                        ),
-                        maxLines: 3,
-                        textInputAction: TextInputAction.done,
-                      ),
-                      const SizedBox(height: 20),
-                      InkWell(
-                        onTap: () => _selectDateTime(context),
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: Theme.of(context).primaryColor.withOpacity(0.5),
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.schedule,
-                                color: Theme.of(context).primaryColor,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Due Date & Time',
-                                      style: TextStyle(
-                                        color: Theme.of(context).primaryColor,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      DateFormat.yMd().add_jm().format(
-                                        DateTime(
-                                          selectedDueDate.year,
-                                          selectedDueDate.month,
-                                          selectedDueDate.day,
-                                          selectedDueTime.hour,
-                                          selectedDueTime.minute,
-                                        ),
-                                      ),
-                                      style: TextStyle(
-                                        color: Colors.grey[600],
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
+                              Text(
+                                'Due Date & Time',
+                                style: TextStyle(
+                                  color: Theme.of(context).primaryColor,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                              Icon(
-                                Icons.arrow_drop_down,
-                                color: Theme.of(context).primaryColor,
+                              const SizedBox(height: 4),
+                              Text(
+                                DateFormat.yMd().add_jm().format(
+                                  DateTime(
+                                    selectedDueDate.year,
+                                    selectedDueDate.month,
+                                    selectedDueDate.day,
+                                    selectedDueTime.hour,
+                                    selectedDueTime.minute,
+                                  ),
+                                ),
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 14,
+                                ),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : () => _createProject(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    elevation: 2,
-                  ),
-                  child: _isLoading
-                      ? const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Text('Creating Project...'),
-                          ],
-                        )
-                      : const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.add_circle_outline),
-                            SizedBox(width: 8),
-                            Text('Create Project'),
-                          ],
+                        Icon(
+                          Icons.arrow_drop_down,
+                          color: Theme.of(context).primaryColor,
                         ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
 }
