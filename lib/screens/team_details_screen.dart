@@ -205,8 +205,15 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> {
   }
 
   Future<void> _saveTeamChanges() async {
-    if (_nameController.text.trim().isEmpty) {
-      setState(() => _errorMessage = 'Team name is required');
+    final updatedTeam = team.copyWith(
+      name: _nameController.text.trim(),
+      description: _descriptionController.text.trim(),
+      updatedAt: DateTime.now(),
+    );
+
+    final errors = updatedTeam.validate();
+    if (errors.isNotEmpty) {
+      setState(() => _errorMessage = errors.first);
       return;
     }
 
@@ -216,11 +223,6 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> {
     });
 
     try {
-      final updatedTeam = team.copyWith(
-        name: _nameController.text.trim(),
-        description: _descriptionController.text.trim(),
-        updatedAt: DateTime.now(),
-      );
       await _teamStore.update(updatedTeam);
 
       setState(() {
