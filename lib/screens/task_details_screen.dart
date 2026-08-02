@@ -2,11 +2,10 @@
 /// Provides rich task information with modern UI and interactive features
 /// Includes status management, attachments, and action buttons
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:task_management/models/task.dart';
-import 'package:task_management/models/task_list_notifier.dart';
 import 'package:provider/provider.dart';
+import 'package:task_management/data/task_store.dart';
+import 'package:task_management/models/task.dart';
 
 class TaskDetailsScreen extends StatefulWidget {
   /// The task to display details for
@@ -25,14 +24,13 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   // State variables for dynamic updates
   bool _isLoading = false;
   String _errorMessage = '';
-  
-  // Firestore references
-  final CollectionReference _tasksCollection = FirebaseFirestore.instance.collection('tasks');
+
+  late final TaskStore _taskStore;
 
   @override
   void initState() {
     super.initState();
-    // Initialize any required data
+    _taskStore = context.read<TaskStore>();
   }
 
   /// Builds comprehensive task details interface
@@ -660,7 +658,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   }
 
   /// Toggles task completion status
-  /// Updates task completion in Firestore
+  /// Updates task completion via TaskStore
   Future<void> _toggleTaskCompletion() async {
     try {
       setState(() {
@@ -682,11 +680,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         createdAt: widget.task.createdAt,
       );
 
-      // Update in Firestore
-      await _tasksCollection.doc(widget.task.id).update(updatedTask.toMap());
-
-      // Update local state
-      Provider.of<TaskListNotifier>(context, listen: false).updateTask(updatedTask);
+      // Update via TaskStore
+      await _taskStore.update(updatedTask);
 
       setState(() {
         _isLoading = false;
@@ -715,7 +710,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   }
 
   /// Deletes task
-  /// Removes task from Firestore with confirmation
+  /// Removes task via TaskStore with confirmation
   Future<void> _deleteTask() async {
     // Show confirmation dialog
     final confirmed = await showDialog<bool>(
@@ -743,11 +738,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           _errorMessage = '';
         });
 
-        // Delete from Firestore
-        await _tasksCollection.doc(widget.task.id).delete();
-
-        // Update local state
-        Provider.of<TaskListNotifier>(context, listen: false).deleteTask(widget.task.id);
+        // Delete via TaskStore
+        await _taskStore.delete(widget.task.id);
 
         setState(() {
           _isLoading = false;
