@@ -15,8 +15,12 @@ void main() {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const TaskManagementApp());
 
-    // Verify that the app loads without errors
-    await tester.pumpAndSettle();
+    // No real Firebase backend in tests, so the auth stream never resolves
+    // and AuthenticationWrapper shows a perpetual loading spinner — pump a
+    // bounded number of frames rather than pumpAndSettle (which would never
+    // return while that spinner keeps animating).
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
     // Basic smoke test - just verify the app builds successfully
     expect(find.byType(MaterialApp), findsOneWidget);

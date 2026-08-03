@@ -34,10 +34,10 @@ class AuthWrongCredentialsException extends AuthException {
 
 class AuthenticationService extends ChangeNotifier {
   static final Logger _logger = Logger('AuthenticationService');
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  FirebaseAuth get _auth => FirebaseAuth.instance;
   late StreamController<CustomUser?> _authStateController;
   late SharedPreferences prefs;
-  final CollectionReference<Map<String, dynamic>> _userCollection =
+  CollectionReference<Map<String, dynamic>> get _userCollection =>
       FirebaseFirestore.instance.collection('users');
   
   bool _isRoleSelected = false;
@@ -77,13 +77,13 @@ class AuthenticationService extends ChangeNotifier {
   bool get isAdmin => prefs.getString('userRole') == 'admin';
 
   AuthenticationService() {
-    _authStateController = StreamController<CustomUser?>();
+    _authStateController = StreamController<CustomUser?>.broadcast();
     init();
   }
 
   Future<void> init() async {
-    SharedPreferences.getInstance().then((prefs) {
-      prefs = prefs;
+    SharedPreferences.getInstance().then((loadedPrefs) {
+      prefs = loadedPrefs;
       _auth.authStateChanges().listen((User? user) {
         if (user == null) {
           _authStateController.add(null);
