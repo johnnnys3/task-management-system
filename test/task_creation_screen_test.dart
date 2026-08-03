@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:task_management/data/project_store.dart';
+import 'package:task_management/data/project_store_in_memory.dart';
 import 'package:task_management/data/task_store.dart';
 import 'package:task_management/data/task_store_in_memory.dart';
 import 'package:task_management/models/project.dart';
@@ -15,10 +17,15 @@ void main() {
     tasks: const [],
   );
 
-  Widget wrap(TaskStore store) {
+  Widget wrap(TaskStore store, {ProjectStore? projectStore}) {
     return MaterialApp(
-      home: Provider<TaskStore>.value(
-        value: store,
+      home: MultiProvider(
+        providers: [
+          Provider<TaskStore>.value(value: store),
+          Provider<ProjectStore>.value(
+            value: projectStore ?? InMemoryProjectStore(),
+          ),
+        ],
         child: CreateTask(
           availableProjects: const [],
           memberFetcher: () async => ['Alex'],
@@ -35,11 +42,13 @@ void main() {
       'A valid description text',
     );
 
+    await tester.ensureVisible(find.text('Choose').first);
     await tester.tap(find.text('Choose').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Alex'));
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.text('Choose').last);
     await tester.tap(find.text('Choose').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Test Project'));
@@ -53,6 +62,7 @@ void main() {
     await tester.pumpAndSettle();
     await fillFormAndSelectAssignments(tester);
 
+    await tester.ensureVisible(find.widgetWithText(ElevatedButton, 'Create Task'));
     await tester.tap(find.widgetWithText(ElevatedButton, 'Create Task'));
     await tester.pumpAndSettle();
 
@@ -72,15 +82,18 @@ void main() {
       find.widgetWithText(TextFormField, 'Task Description'),
       'A valid description text',
     );
+    await tester.ensureVisible(find.text('Choose').first);
     await tester.tap(find.text('Choose').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Alex'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Choose').last);
     await tester.tap(find.text('Choose').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Test Project'));
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.widgetWithText(ElevatedButton, 'Create Task'));
     await tester.tap(find.widgetWithText(ElevatedButton, 'Create Task'));
     await tester.pumpAndSettle();
 

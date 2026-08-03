@@ -8,7 +8,10 @@ import 'package:task_management/data/project_store.dart';
 import 'package:task_management/data/task_store.dart';
 import 'package:task_management/models/project.dart';
 import 'package:task_management/models/task.dart';
+import 'package:task_management/theme/app_colors.dart';
+import 'package:task_management/widgets/app_card.dart';
 import 'package:task_management/widgets/entity_form_scaffold.dart';
+import 'package:task_management/widgets/pill_button.dart';
 
 /// Fetches the list of assignable member names.
 typedef MemberFetcher = Future<List<String>> Function();
@@ -64,11 +67,12 @@ class _CreateTaskState extends State<CreateTask> {
   final List<String> _categories = ['Work', 'Personal', 'Shopping', 'Health', 'Other'];
   String _selectedCategory = 'Work';
   
-  // Firestore reference (users aren't covered by TaskStore)
-  final CollectionReference _usersCollection = FirebaseFirestore.instance.collection('users');
+  // Firestore reference (users aren't covered by TaskStore). Lazily
+  // constructed so it never touches Firebase when memberFetcher is
+  // overridden (e.g. in tests).
+  CollectionReference get _usersCollection => FirebaseFirestore.instance.collection('users');
 
   late final TaskStore _taskStore;
-  late final ProjectStore _projectStore;
   late final MemberFetcher _memberFetcher;
   late final ProjectFetcher _projectFetcher;
 
@@ -76,9 +80,8 @@ class _CreateTaskState extends State<CreateTask> {
   void initState() {
     super.initState();
     _taskStore = context.read<TaskStore>();
-    _projectStore = context.read<ProjectStore>();
     _memberFetcher = widget.memberFetcher ?? _fetchMembersFromFirestore;
-    _projectFetcher = widget.projectFetcher ?? _projectStore.fetch;
+    _projectFetcher = widget.projectFetcher ?? context.read<ProjectStore>().fetch;
     _fetchMembers();
     _initializeDefaultValues();
   }
@@ -180,19 +183,13 @@ class _CreateTaskState extends State<CreateTask> {
   /// Builds task information card
   /// Includes task name, description, and due date
   Widget _buildTaskInformationCard() {
-    return Card(
-      elevation: 3,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+            Text(
               'Task Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -236,13 +233,12 @@ class _CreateTaskState extends State<CreateTask> {
                   },
                   child: Text(
                     "${_selectedDueDate.toLocal()}".split(' ')[0],
-                    style: const TextStyle(color: Colors.blue),
+                    style: const TextStyle(color: AppColors.terra),
                   ),
                 ),
               ],
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -250,19 +246,13 @@ class _CreateTaskState extends State<CreateTask> {
   /// Builds task details card
   /// Includes task priority and category
   Widget _buildTaskDetailsCard() {
-    return Card(
-      elevation: 3,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+            Text(
               'Task Details',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField(
@@ -300,8 +290,7 @@ class _CreateTaskState extends State<CreateTask> {
                 });
               },
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -309,19 +298,13 @@ class _CreateTaskState extends State<CreateTask> {
   /// Builds assignment card
   /// Includes member selection
   Widget _buildAssignmentCard() {
-    return Card(
-      elevation: 3,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+            Text(
               'Assign Members',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 16),
             Row(
@@ -329,16 +312,15 @@ class _CreateTaskState extends State<CreateTask> {
                 Expanded(
                   child: Text(_selectedMember ?? 'Select Member'),
                 ),
-                ElevatedButton(
+                PillButton(
+                  label: 'Choose',
                   onPressed: () {
                     _selectMember(context);
                   },
-                  child: const Text('Choose'),
                 ),
               ],
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -346,19 +328,13 @@ class _CreateTaskState extends State<CreateTask> {
   /// Builds project card
   /// Includes project selection
   Widget _buildProjectCard() {
-    return Card(
-      elevation: 3,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+            Text(
               'Project Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 16),
             Row(
@@ -366,16 +342,15 @@ class _CreateTaskState extends State<CreateTask> {
                 Expanded(
                   child: Text(_selectedProjectName ?? 'Select Project'),
                 ),
-                ElevatedButton(
+                PillButton(
+                  label: 'Choose',
                   onPressed: () {
                     _selectProject(context);
                   },
-                  child: const Text('Choose'),
                 ),
               ],
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -383,18 +358,18 @@ class _CreateTaskState extends State<CreateTask> {
   /// Builds create button
   /// Creates task when pressed
   Widget _buildCreateButton() {
-    return ElevatedButton(
+    return PillButton(
+      label: 'Create Task',
       onPressed: _canCreateTask() ? _createTask : null,
-      child: const Text('Create Task'),
     );
   }
 
   /// Checks if task can be created
-  /// Validates form and checks for member and project selection
+  /// Full form validation happens in _createTask at submit time, once the
+  /// Form has mounted — this only gates the button on the required
+  /// selections, which are safe to read during build.
   bool _canCreateTask() {
-    return _formKey.currentState!.validate() &&
-        _selectedMember != null &&
-        _selectedProjectId != null;
+    return _selectedMember != null && _selectedProjectId != null;
   }
 
   /// Shows member selection modal
@@ -406,10 +381,12 @@ class _CreateTaskState extends State<CreateTask> {
       builder: (BuildContext context) {
         return Container(
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: AppColors.paper,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
-          child: Column(
+          child: Material(
+            color: Colors.transparent,
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               // Header
@@ -418,12 +395,9 @@ class _CreateTaskState extends State<CreateTask> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Select Team Member',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                     IconButton(
                       icon: const Icon(Icons.close),
@@ -434,26 +408,25 @@ class _CreateTaskState extends State<CreateTask> {
               ),
               const Divider(height: 1),
               // Member list
-              SizedBox(
-                height: 300,
+              Flexible(
                 child: ListView.builder(
                   itemCount: _memberList.length,
                   itemBuilder: (context, index) {
                     final member = _memberList[index];
                     return ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: Theme.of(context).primaryColor,
+                        backgroundColor: AppColors.avatarColor(member),
                         child: Text(
                           member.isNotEmpty ? member[0].toUpperCase() : '?',
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppColors.paper,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                       title: Text(member),
                       trailing: _selectedMember == member
-                          ? const Icon(Icons.check, color: Colors.green)
+                          ? const Icon(Icons.check, color: AppColors.sage)
                           : null,
                       onTap: () {
                         setState(() {
@@ -466,6 +439,7 @@ class _CreateTaskState extends State<CreateTask> {
                 ),
               ),
             ],
+            ),
           ),
         );
       },
@@ -481,10 +455,12 @@ class _CreateTaskState extends State<CreateTask> {
       builder: (BuildContext context) {
         return Container(
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: AppColors.paper,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
-          child: Column(
+          child: Material(
+            color: Colors.transparent,
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               // Header
@@ -493,12 +469,9 @@ class _CreateTaskState extends State<CreateTask> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Select Project',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                     IconButton(
                       icon: const Icon(Icons.close),
@@ -509,8 +482,7 @@ class _CreateTaskState extends State<CreateTask> {
               ),
               const Divider(height: 1),
               // Project list
-              SizedBox(
-                height: 300,
+              Flexible(
                 child: FutureBuilder<List<Project>>(
                   future: _fetchAvailableProjects(),
                   builder: (context, snapshot) {
@@ -524,22 +496,22 @@ class _CreateTaskState extends State<CreateTask> {
                       return Center(
                         child: Text(
                           'Error loading projects: ${snapshot.error}',
-                          style: const TextStyle(color: Colors.red),
+                          style: const TextStyle(color: AppColors.rust),
                         ),
                       );
                     }
-                    
+
                     final projects = snapshot.data ?? [];
                     return ListView.builder(
                       itemCount: projects.length,
                       itemBuilder: (context, index) {
                         final project = projects[index];
                         return ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Theme.of(context).primaryColor,
-                            child: const Icon(
+                          leading: const CircleAvatar(
+                            backgroundColor: AppColors.terra,
+                            child: Icon(
                               Icons.folder,
-                              color: Colors.white,
+                              color: AppColors.paper,
                             ),
                           ),
                           title: Text(project.name),
@@ -551,7 +523,7 @@ class _CreateTaskState extends State<CreateTask> {
                                 )
                               : null,
                           trailing: _selectedProjectId == project.id
-                              ? const Icon(Icons.check, color: Colors.green)
+                              ? const Icon(Icons.check, color: AppColors.sage)
                               : null,
                           onTap: () {
                             setState(() {
@@ -567,6 +539,7 @@ class _CreateTaskState extends State<CreateTask> {
                 ),
               ),
             ],
+            ),
           ),
         );
       },
@@ -655,7 +628,7 @@ class _CreateTaskState extends State<CreateTask> {
         title: taskTitle,
         description: '',
       );
-      await _projectStore.update(
+      await context.read<ProjectStore>().update(
         project.copyWith(tasks: [...project.tasks, projectTask]),
       );
     } catch (e) {
@@ -672,21 +645,21 @@ class _CreateTaskState extends State<CreateTask> {
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.white),
+            const Icon(Icons.check_circle, color: AppColors.paper),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 message,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: AppColors.paper),
               ),
             ),
           ],
         ),
-        backgroundColor: Colors.green[600],
+        backgroundColor: AppColors.sage,
         duration: const Duration(seconds: 3),
         action: SnackBarAction(
           label: 'Dismiss',
-          textColor: Colors.white,
+          textColor: AppColors.paper,
           onPressed: () {
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
           },

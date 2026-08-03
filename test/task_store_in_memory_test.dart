@@ -102,9 +102,9 @@ void main() {
     });
 
     test('filters by exact due date', () async {
-      final target = DateTime(2026, 8, 1);
+      final target = DateTime.now().add(const Duration(days: 30));
       await store.create(buildTask(title: 'On date', dueDate: target));
-      await store.create(buildTask(title: 'Other date', dueDate: DateTime(2026, 8, 2)));
+      await store.create(buildTask(title: 'Other date', dueDate: target.add(const Duration(days: 1))));
 
       final tasks = await store.fetch(dueDate: target);
       expect(tasks.map((t) => t.title), ['On date']);

@@ -9,6 +9,8 @@ import 'package:task_management/models/task.dart' as TaskModel;
 import 'package:task_management/screens/task_details_screen.dart';
 import 'package:task_management/screens/task_creation_screen.dart';
 import 'package:task_management/screens/update_task_screen.dart';
+import 'package:task_management/theme/app_colors.dart';
+import 'package:task_management/widgets/priority_badge.dart';
 
 class TaskListScreen extends StatefulWidget {
   /// User ID for filtering tasks
@@ -209,15 +211,15 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
       title: const Text(
         'Tasks',
         style: TextStyle(
-          color: Colors.white,
+          color: AppColors.shell,
           fontWeight: FontWeight.bold,
         ),
       ),
-      backgroundColor: Theme.of(context).primaryColor,
+      backgroundColor: AppColors.terra,
       elevation: 0,
       // Search bar in app bar
       bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(80),
+        preferredSize: const Size.fromHeight(90),
         child: Container(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -229,7 +231,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
                   hintText: 'Search tasks...',
                   prefixIcon: const Icon(Icons.search),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: AppColors.paper,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide.none,
@@ -251,7 +253,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
                       decoration: const InputDecoration(
                         labelText: 'Filter',
                         filled: true,
-                        fillColor: Colors.white,
+                        fillColor: AppColors.paper,
                         contentPadding: EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 8,
@@ -279,7 +281,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
                       decoration: const InputDecoration(
                         labelText: 'Sort',
                         filled: true,
-                        fillColor: Colors.white,
+                        fillColor: AppColors.paper,
                         contentPadding: EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 8,
@@ -334,18 +336,18 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        border: Border.all(color: Colors.red.shade200),
+        color: AppColors.rust.withOpacity(0.08),
+        border: Border.all(color: AppColors.rust.withOpacity(0.3)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
-          Icon(Icons.error_outline, color: Colors.red.shade700),
+          const Icon(Icons.error_outline, color: AppColors.rust),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               _errorMessage,
-              style: TextStyle(color: Colors.red.shade700),
+              style: const TextStyle(color: AppColors.rust),
             ),
           ),
           IconButton(
@@ -396,16 +398,16 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
       child: Row(
         children: [
           // Total tasks
-          _buildStatCard('Total', _tasks.length.toString(), Colors.blue),
+          _buildStatCard('Total', _tasks.length.toString(), AppColors.terra),
           const SizedBox(width: 8),
           // Completed tasks
-          _buildStatCard('Completed', completedCount.toString(), Colors.green),
+          _buildStatCard('Completed', completedCount.toString(), AppColors.sage),
           const SizedBox(width: 8),
           // Pending tasks
-          _buildStatCard('Pending', pendingCount.toString(), Colors.orange),
+          _buildStatCard('Pending', pendingCount.toString(), AppColors.statusReview),
           const SizedBox(width: 8),
           // Overdue tasks
-          _buildStatCard('Overdue', overdueCount.toString(), Colors.red),
+          _buildStatCard('Overdue', overdueCount.toString(), AppColors.rust),
         ],
       ),
     );
@@ -452,28 +454,28 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
+          const Icon(
             Icons.inbox_outlined,
             size: 64,
-            color: Colors.grey[400],
+            color: AppColors.ink3,
           ),
           const SizedBox(height: 16),
           Text(
-            _searchController.text.isNotEmpty 
+            _searchController.text.isNotEmpty
                 ? 'No tasks found matching "${_searchController.text}"'
                 : 'No tasks found',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 18,
-              color: Colors.grey[600],
+              color: AppColors.ink2,
               fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: 8),
-          Text(
+          const Text(
             'Try adjusting your filters or create a new task',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey[500],
+              color: AppColors.ink3,
             ),
           ),
         ],
@@ -516,10 +518,10 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).primaryColor.withOpacity(0.1),
+        color: AppColors.terra.withOpacity(0.1),
         border: Border(
           bottom: BorderSide(
-            color: Theme.of(context).primaryColor.withOpacity(0.3),
+            color: AppColors.terra.withOpacity(0.3),
           ),
         ),
       ),
@@ -527,8 +529,8 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
         children: [
           Text(
             '${_selectedTasks.length} selected',
-            style: TextStyle(
-              color: Theme.of(context).primaryColor,
+            style: const TextStyle(
+              color: AppColors.terra,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -547,8 +549,8 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
           if (_selectedTasks.isNotEmpty)
             TextButton.icon(
               onPressed: _deleteSelectedTasks,
-              icon: const Icon(Icons.delete, color: Colors.red),
-              label: const Text('Delete', style: TextStyle(color: Colors.red)),
+              icon: const Icon(Icons.delete, color: AppColors.rust),
+              label: const Text('Delete', style: TextStyle(color: AppColors.rust)),
             ),
         ],
       ),
@@ -568,7 +570,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
             onPressed: _exitSelectionMode,
             icon: const Icon(Icons.close),
             label: const Text('Cancel'),
-            backgroundColor: Colors.grey,
+            backgroundColor: AppColors.ink3,
           ),
           // Delete selected
           if (_selectedTasks.isNotEmpty)
@@ -578,7 +580,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
                 onPressed: _deleteSelectedTasks,
                 icon: const Icon(Icons.delete),
                 label: Text('Delete ${_selectedTasks.length}'),
-                backgroundColor: Colors.red,
+                backgroundColor: AppColors.rust,
               ),
             ),
         ],
@@ -589,7 +591,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
         onPressed: _navigateToCreateTask,
         icon: const Icon(Icons.add),
         label: const Text('Create Task'),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: AppColors.terra,
       );
     }
   }
@@ -630,7 +632,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: AppColors.rust)),
           ),
         ],
       ),
@@ -703,7 +705,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: AppColors.rust)),
           ),
         ],
       ),
@@ -779,7 +781,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: AppColors.rust)),
           ),
         ],
       ),
@@ -831,21 +833,21 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.white),
+            const Icon(Icons.check_circle, color: AppColors.shell),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 message,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: AppColors.shell),
               ),
             ),
           ],
         ),
-        backgroundColor: Colors.green[600],
+        backgroundColor: AppColors.sage,
         duration: const Duration(seconds: 3),
         action: SnackBarAction(
           label: 'Dismiss',
-          textColor: Colors.white,
+          textColor: AppColors.shell,
           onPressed: () {
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
           },
@@ -920,8 +922,8 @@ class TaskListItem extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: isSelected 
-            ? BorderSide(color: Theme.of(context).primaryColor, width: 2)
+        side: isSelected
+            ? const BorderSide(color: AppColors.terra, width: 2)
             : BorderSide.none,
       ),
       child: InkWell(
@@ -951,7 +953,7 @@ class TaskListItem extends StatelessWidget {
                         onChanged: (value) {
                           onSelectionToggle!(task.id);
                         },
-                        activeColor: Theme.of(context).primaryColor,
+                        activeColor: AppColors.terra,
                       ),
                     ),
                   // Title and status
@@ -964,10 +966,10 @@ class TaskListItem extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            decoration: task.isCompleted 
+                            decoration: task.isCompleted
                                 ? TextDecoration.lineThrough
                                 : TextDecoration.none,
-                            color: task.isCompleted ? Colors.grey : Colors.black87,
+                            color: task.isCompleted ? AppColors.ink3 : AppColors.ink,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -983,21 +985,21 @@ class TaskListItem extends StatelessWidget {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: task.isCompleted 
-                                    ? Colors.green 
-                                    : isOverdue 
-                                        ? Colors.red 
-                                        : Colors.orange,
+                                color: task.isCompleted
+                                    ? AppColors.sage
+                                    : isOverdue
+                                        ? AppColors.rust
+                                        : AppColors.statusReview,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                task.isCompleted 
-                                    ? 'Completed' 
-                                    : isOverdue 
-                                        ? 'Overdue' 
+                                task.isCompleted
+                                    ? 'Completed'
+                                    : isOverdue
+                                        ? 'Overdue'
                                         : 'Pending',
                                 style: const TextStyle(
-                                  color: Colors.white,
+                                  color: AppColors.shell,
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -1005,25 +1007,7 @@ class TaskListItem extends StatelessWidget {
                             ),
                             const SizedBox(width: 8),
                             // Priority badge
-                            if (task.priority.name.isNotEmpty)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: _getPriorityColor(task.priority.name),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  task.priority.name,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
+                            PriorityBadge(priority: task.priority),
                           ],
                         ),
                       ],
@@ -1051,9 +1035,9 @@ class TaskListItem extends StatelessWidget {
                             value: 'delete',
                             child: Row(
                               children: [
-                                Icon(Icons.delete, size: 18, color: Colors.red),
+                                Icon(Icons.delete, size: 18, color: AppColors.rust),
                                 SizedBox(width: 8),
-                                Text('Delete', style: TextStyle(color: Colors.red)),
+                                Text('Delete', style: TextStyle(color: AppColors.rust)),
                               ],
                             ),
                           ),
@@ -1066,9 +1050,9 @@ class TaskListItem extends StatelessWidget {
               if (task.description.isNotEmpty)
                 Text(
                   task.description,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
-                    color: Colors.grey[600],
+                    color: AppColors.ink2,
                     height: 1.4,
                   ),
                   maxLines: 2,
@@ -1085,14 +1069,14 @@ class TaskListItem extends StatelessWidget {
                         Icon(
                           Icons.calendar_today,
                           size: 16,
-                          color: isOverdue ? Colors.red : Colors.grey[600],
+                          color: isOverdue ? AppColors.rust : AppColors.ink2,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           'Due: ${task.dueDate != null ? _formatDate(task.dueDate!) : 'No due date'}',
                           style: TextStyle(
                             fontSize: 12,
-                            color: isOverdue ? Colors.red : Colors.grey[600],
+                            color: isOverdue ? AppColors.rust : AppColors.ink2,
                           ),
                         ),
                       ],
@@ -1102,17 +1086,17 @@ class TaskListItem extends StatelessWidget {
                   if (task.assignedMembers.isNotEmpty)
                     Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.people,
                           size: 16,
-                          color: Colors.grey[600],
+                          color: AppColors.ink2,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '${task.assignedMembers.length} member${task.assignedMembers.length == 1 ? '' : 's'}',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 12,
-                            color: Colors.grey[600],
+                            color: AppColors.ink2,
                           ),
                         ),
                       ],
@@ -1150,7 +1134,7 @@ class TaskListItem extends StatelessWidget {
             value: 'delete',
             child: ListTile(
               title: const Text('Delete Task'),
-              leading: const Icon(Icons.delete, color: Colors.red),
+              leading: const Icon(Icons.delete, color: AppColors.rust),
               onTap: () {
                 Navigator.pop(context);
                 onDeleteTask!(task);
@@ -1179,15 +1163,15 @@ class TaskListItem extends StatelessWidget {
   Color _getPriorityColor(String priority) {
     switch (priority.toLowerCase()) {
       case 'urgent':
-        return Colors.red;
+        return AppColors.rust;
       case 'high':
-        return Colors.orange;
+        return AppColors.statusReview;
       case 'medium':
-        return Colors.blue;
+        return AppColors.terra;
       case 'low':
-        return Colors.green;
+        return AppColors.sage;
       default:
-        return Colors.grey;
+        return AppColors.ink3;
     }
   }
 
@@ -1219,8 +1203,8 @@ class ErrorDisplay extends StatelessWidget {
         margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.red.shade50,
-          border: Border.all(color: Colors.red.shade200),
+          color: AppColors.rust.withOpacity(0.08),
+          border: Border.all(color: AppColors.rust.withOpacity(0.3)),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -1229,7 +1213,7 @@ class ErrorDisplay extends StatelessWidget {
             Icon(
               Icons.error_outline,
               size: 48,
-              color: Colors.red.shade700,
+              color: AppColors.rust,
             ),
             const SizedBox(height: 16),
             Text(
@@ -1237,7 +1221,7 @@ class ErrorDisplay extends StatelessWidget {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.red.shade700,
+                color: AppColors.rust,
               ),
             ),
             const SizedBox(height: 8),
@@ -1245,7 +1229,7 @@ class ErrorDisplay extends StatelessWidget {
               message,
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.red.shade600,
+                color: AppColors.rust,
               ),
               textAlign: TextAlign.center,
             ),
@@ -1256,7 +1240,7 @@ class ErrorDisplay extends StatelessWidget {
                 icon: const Icon(Icons.refresh),
                 label: const Text('Try Again'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red.shade600,
+                  backgroundColor: AppColors.rust,
                   foregroundColor: Colors.white,
                 ),
               ),

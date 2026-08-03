@@ -26,6 +26,7 @@ void main() {
     final task = (await store.fetch()).single;
 
     await tester.pumpWidget(wrap(store, task));
+    await tester.ensureVisible(find.text('Mark Complete'));
     await tester.tap(find.text('Mark Complete'));
     await tester.pumpAndSettle();
 
@@ -58,6 +59,7 @@ void main() {
     const task = Task(id: 'missing', title: 'Ghost task', description: 'A valid description text');
 
     await tester.pumpWidget(wrap(store, task));
+    await tester.ensureVisible(find.text('Mark Complete'));
     await tester.tap(find.text('Mark Complete'));
     await tester.pumpAndSettle();
 
@@ -76,6 +78,7 @@ void main() {
     final task = Task(id: id, title: '', description: 'A valid description text');
 
     await tester.pumpWidget(wrap(store, task));
+    await tester.ensureVisible(find.text('Mark Complete'));
     await tester.tap(find.text('Mark Complete'));
     await tester.pumpAndSettle();
 
