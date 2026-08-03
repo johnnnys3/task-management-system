@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:task_management/theme/app_colors.dart';
 
 /// Common Scaffold shell for entity create/update forms: app bar with a save
 /// action, a dismissible error banner, and a loading overlay shown while saving.
@@ -32,12 +33,7 @@ class EntityFormScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          title,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Theme.of(context).primaryColor,
-        elevation: 0,
+        title: Text(title),
         actions: [
           if (!isLoading)
             IconButton(
@@ -83,16 +79,16 @@ class _ErrorBanner extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        border: Border.all(color: Colors.red.shade200),
+        color: AppColors.blush,
+        border: Border.all(color: AppColors.rust.withOpacity(0.3)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
-          Icon(Icons.error_outline, color: Colors.red.shade700),
+          Icon(Icons.error_outline, color: AppColors.rust),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(message, style: TextStyle(color: Colors.red.shade700)),
+            child: Text(message, style: TextStyle(color: AppColors.rust)),
           ),
           IconButton(icon: const Icon(Icons.close), onPressed: onDismiss),
         ],

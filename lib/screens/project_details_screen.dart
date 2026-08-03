@@ -9,6 +9,45 @@ import 'package:task_management/models/task.dart';
 import 'package:task_management/data/task_store.dart';
 import 'package:task_management/data/project_store.dart';
 import 'package:task_management/screens/task_details_screen.dart';
+import 'package:task_management/theme/app_colors.dart';
+import 'package:task_management/theme/app_theme.dart';
+import 'package:task_management/widgets/app_card.dart';
+import 'package:task_management/widgets/avatar_badge.dart';
+import 'package:task_management/widgets/priority_badge.dart';
+import 'package:task_management/widgets/progress_bar.dart';
+import 'package:task_management/widgets/status_chip.dart';
+
+/// Local color mapping for [ProjectStatus], not reused widely enough to
+/// warrant a home in AppColors.
+Color _projectStatusColor(ProjectStatus status) {
+  switch (status) {
+    case ProjectStatus.planning:
+      return AppColors.ink3;
+    case ProjectStatus.inProgress:
+      return AppColors.terra;
+    case ProjectStatus.onHold:
+      return const Color(0xFFC08A3E); // amber
+    case ProjectStatus.completed:
+      return AppColors.sage;
+    case ProjectStatus.cancelled:
+      return AppColors.ink3;
+  }
+}
+
+String _projectStatusLabel(ProjectStatus status) {
+  switch (status) {
+    case ProjectStatus.planning:
+      return 'Planning';
+    case ProjectStatus.inProgress:
+      return 'Active';
+    case ProjectStatus.onHold:
+      return 'On Hold';
+    case ProjectStatus.completed:
+      return 'Completed';
+    case ProjectStatus.cancelled:
+      return 'Cancelled';
+  }
+}
 
 class ProjectDetailsScreen extends StatefulWidget {
   /// Project to display details for
@@ -147,32 +186,29 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     return AppBar(
       title: Text(
         _isEditing ? 'Edit Project' : 'Project Details',
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
+        style: AppTheme.display(size: 20, color: AppColors.shell),
       ),
-      backgroundColor: Theme.of(context).primaryColor,
+      backgroundColor: AppColors.terra,
       elevation: 0,
       // Edit/save actions
       actions: [
         if (_isEditing)
           // Save button in edit mode
           IconButton(
-            icon: const Icon(Icons.save, color: Colors.white),
+            icon: Icon(Icons.save, color: AppColors.shell),
             tooltip: 'Save Changes',
             onPressed: _saveProjectChanges,
           )
         else
           // Edit button in view mode
           IconButton(
-            icon: const Icon(Icons.edit, color: Colors.white),
+            icon: Icon(Icons.edit, color: AppColors.shell),
             tooltip: 'Edit Project',
             onPressed: _toggleEditMode,
           ),
         // More options menu
         PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert, color: Colors.white),
+          icon: Icon(Icons.more_vert, color: AppColors.shell),
           tooltip: 'More Options',
           onSelected: _handleMenuAction,
           itemBuilder: (context) => [
@@ -186,13 +222,13 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 ],
               ),
             ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'delete',
               child: Row(
                 children: [
-                  Icon(Icons.delete, color: Colors.red),
-                  SizedBox(width: 8),
-                  Text('Delete Project', style: TextStyle(color: Colors.red)),
+                  Icon(Icons.delete, color: AppColors.rust),
+                  const SizedBox(width: 8),
+                  Text('Delete Project', style: TextStyle(color: AppColors.rust)),
                 ],
               ),
             ),
@@ -209,16 +245,16 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(
+          CircularProgressIndicator(
             strokeWidth: 3,
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.terra),
           ),
           const SizedBox(height: 16),
           Text(
             'Loading project details...',
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey.shade600,
+              color: AppColors.ink2,
             ),
           ),
         ],
@@ -260,99 +296,107 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   /// Builds project information card
   /// Displays project name, due date, and status
   Widget _buildProjectInfoCard() {
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Project name
-            if (_isEditing)
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Project Name',
-                  border: OutlineInputBorder(),
-                ),
-                style: const TextStyle(fontSize: 18),
-              )
-            else
-              Row(
-                children: [
-                  Icon(
-                    Icons.work,
-                    color: Theme.of(context).primaryColor,
-                    size: 24,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      project.name,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
+    final statusColor = _projectStatusColor(project.status);
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Project name
+          if (_isEditing)
+            TextFormField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Project Name',
               ),
-            const SizedBox(height: 16),
-            // Due date
-            if (_isEditing)
-              TextFormField(
-                controller: _dueDateController,
-                decoration: const InputDecoration(
-                  labelText: 'Due Date',
-                  border: OutlineInputBorder(),
-                  suffixIcon: Icon(Icons.calendar_today),
-                ),
-                onTap: _selectDueDate,
-                readOnly: true,
-              )
-            else
-              Row(
-                children: [
-                  Icon(
-                    Icons.event,
-                    color: Colors.grey[600],
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Due Date: ${_formatDate(project.dueDate)}',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            const SizedBox(height: 16),
-            // Status
+              style: const TextStyle(fontSize: 18),
+            )
+          else
             Row(
               children: [
-                Icon(
-                  project.isCompleted ? Icons.check_circle : Icons.pending,
-                  color: project.isCompleted ? Colors.green : Colors.orange,
-                  size: 20,
+                Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: AppColors.avatarColor(project.id),
+                    shape: BoxShape.circle,
+                  ),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  project.isCompleted ? 'Completed' : 'In Progress',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: project.isCompleted ? Colors.green : Colors.orange,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    project.name,
+                    style: AppTheme.display(size: 24, color: AppColors.ink),
+                  ),
+                ),
+                // Status pill
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.16),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: Text(
+                    _projectStatusLabel(project.status),
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
             ),
-          ],
-        ),
+          const SizedBox(height: 16),
+          // Due date
+          if (_isEditing)
+            TextFormField(
+              controller: _dueDateController,
+              decoration: const InputDecoration(
+                labelText: 'Due Date',
+                suffixIcon: Icon(Icons.calendar_today),
+              ),
+              onTap: _selectDueDate,
+              readOnly: true,
+            )
+          else
+            Row(
+              children: [
+                Icon(
+                  Icons.event,
+                  color: AppColors.ink2,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Due Date: ${_formatDate(project.dueDate)}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppColors.ink2,
+                  ),
+                ),
+              ],
+            ),
+          const SizedBox(height: 16),
+          // Status
+          Row(
+            children: [
+              Icon(
+                project.isCompleted ? Icons.check_circle : Icons.pending,
+                color: project.isCompleted ? AppColors.sage : const Color(0xFFC08A3E),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                project.isCompleted ? 'Completed' : 'In Progress',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: project.isCompleted ? AppColors.sage : const Color(0xFFC08A3E),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -405,9 +449,9 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                     : 'No description available',
                 style: TextStyle(
                   fontSize: 16,
-                  color: projectDescription.isNotEmpty 
-                      ? Colors.black87 
-                      : Colors.grey[600],
+                  color: projectDescription.isNotEmpty
+                      ? AppColors.ink
+                      : AppColors.ink3,
                 ),
               ),
           ],
@@ -456,7 +500,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                     final task = relatedTasks[index];
                     return ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: task.isCompleted ? Colors.green : Colors.orange,
+                        backgroundColor: task.isCompleted ? AppColors.sage : AppColors.statusReview,
                         child: Icon(
                           task.isCompleted ? Icons.check : Icons.pending,
                           color: Colors.white,
@@ -472,9 +516,9 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                               'Due: ${_formatDate(task.dueDate!)}',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: task.dueDate!.isBefore(DateTime.now()) 
-                                    ? Colors.red 
-                                    : Colors.grey.shade600,
+                                color: task.dueDate!.isBefore(DateTime.now())
+                                    ? AppColors.rust
+                                    : AppColors.ink3,
                               ),
                             )
                           : null,
@@ -490,14 +534,14 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                     Icon(
                       Icons.task_alt,
                       size: 48,
-                      color: Colors.grey[400],
+                      color: AppColors.ink3,
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'No related tasks',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Colors.grey[600],
+                        color: AppColors.ink3,
                       ),
                     ),
                   ],
@@ -555,7 +599,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                       'Progress',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey[600],
+                        color: AppColors.ink3,
                       ),
                     ),
                     Text(
@@ -563,11 +607,11 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: progress >= 75 
-                            ? Colors.green 
-                            : progress >= 50 
-                                ? Colors.orange 
-                                : Colors.red,
+                        color: progress >= 75
+                            ? AppColors.sage
+                            : progress >= 50
+                                ? AppColors.statusReview
+                                : AppColors.rust,
                       ),
                     ),
                   ],
@@ -575,13 +619,13 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 const SizedBox(height: 8),
                 LinearProgressIndicator(
                   value: progress / 100,
-                  backgroundColor: Colors.grey[300],
+                  backgroundColor: AppColors.sand,
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    progress >= 75 
-                        ? Colors.green 
-                        : progress >= 50 
-                            ? Colors.orange 
-                            : Colors.red,
+                    progress >= 75
+                        ? AppColors.sage
+                        : progress >= 50
+                            ? AppColors.statusReview
+                            : AppColors.rust,
                   ),
                 ),
               ],
@@ -624,7 +668,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           label,
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey[600],
+            color: AppColors.ink3,
           ),
         ),
       ],
@@ -641,7 +685,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           const Icon(
             Icons.error_outline,
             size: 64,
-            color: Colors.red,
+            color: AppColors.rust,
           ),
           const SizedBox(height: 16),
           Text(
@@ -776,7 +820,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
               _deleteProject();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.rust,
               foregroundColor: Colors.white,
             ),
             child: const Text('Delete'),
@@ -841,7 +885,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
             ),
           ],
         ),
-        backgroundColor: Colors.green[600],
+        backgroundColor: AppColors.sage,
         duration: const Duration(seconds: 3),
         action: SnackBarAction(
           label: 'Dismiss',
@@ -872,7 +916,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
             ),
           ],
         ),
-        backgroundColor: Colors.red[600],
+        backgroundColor: AppColors.rust,
         duration: const Duration(seconds: 4),
         action: SnackBarAction(
           label: 'Dismiss',
@@ -904,14 +948,14 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
               _isEditing = true;
             });
           },
-          backgroundColor: Colors.blue,
+          backgroundColor: AppColors.terra,
           child: const Icon(Icons.edit, color: Colors.white),
         ),
         const SizedBox(height: 8),
         FloatingActionButton(
           heroTag: "delete",
           onPressed: () => _showDeleteConfirmation(),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.rust,
           child: const Icon(Icons.delete, color: Colors.white),
         ),
       ],

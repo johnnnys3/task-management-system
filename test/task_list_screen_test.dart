@@ -21,17 +21,19 @@ void main() {
       MaterialApp(
         home: Provider<TaskStore>.value(
           value: store,
-          child: const TaskListScreen(
-            userId: 'user-1',
-            user: CustomUser(
-              uid: 'user-1',
-              email: 'user@example.com',
-              name: 'Test User',
-              role: 'regular',
-              assignedProjects: [],
+          child: const Scaffold(
+            body: TaskListScreen(
+              userId: 'user-1',
+              user: CustomUser(
+                uid: 'user-1',
+                email: 'user@example.com',
+                name: 'Test User',
+                role: 'regular',
+                assignedProjects: [],
+              ),
+              isAdmin: false,
+              tasks: [],
             ),
-            isAdmin: false,
-            tasks: [],
           ),
         ),
       ),

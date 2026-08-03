@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:task_management/data/team_store.dart';
 import 'package:task_management/models/team.dart';
+import 'package:task_management/theme/app_colors.dart';
+import 'package:task_management/theme/app_theme.dart';
+import 'package:task_management/widgets/app_card.dart';
 import 'package:task_management/widgets/entity_form_scaffold.dart';
 
 class CreateTeamScreen extends StatefulWidget {
@@ -80,76 +83,67 @@ class _CreateTeamScreenState extends State<CreateTeamScreen> {
       onSave: _createTeam,
       saveTooltip: 'Save Team',
       children: [
-        Card(
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Team Details',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).primaryColor,
+        AppCard(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Team Details',
+                style: AppTheme.display(size: 20, weight: FontWeight.bold, color: AppColors.ink),
+              ),
+              const SizedBox(height: 24),
+              TextFormField(
+                controller: teamNameController,
+                validator: Team.validateName,
+                decoration: InputDecoration(
+                  labelText: 'Team Name *',
+                  hintText: 'Enter team name',
+                  prefixIcon: const Icon(Icons.title),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                ),
-                const SizedBox(height: 24),
-                TextFormField(
-                  controller: teamNameController,
-                  validator: Team.validateName,
-                  decoration: InputDecoration(
-                    labelText: 'Team Name *',
-                    hintText: 'Enter team name',
-                    prefixIcon: const Icon(Icons.title),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).primaryColor,
-                        width: 2,
-                      ),
-                    ),
-                    errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Colors.red),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(
+                      color: AppColors.terra,
+                      width: 2,
                     ),
                   ),
-                  textInputAction: TextInputAction.next,
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: AppColors.rust),
+                  ),
                 ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  controller: teamDescriptionController,
-                  validator: Team.validateDescription,
-                  decoration: InputDecoration(
-                    labelText: 'Team Description',
-                    hintText: 'Enter team description',
-                    prefixIcon: const Icon(Icons.description),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).primaryColor,
-                        width: 2,
-                      ),
-                    ),
-                    errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Colors.red),
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: teamDescriptionController,
+                validator: Team.validateDescription,
+                decoration: InputDecoration(
+                  labelText: 'Team Description',
+                  hintText: 'Enter team description',
+                  prefixIcon: const Icon(Icons.description),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(
+                      color: AppColors.terra,
+                      width: 2,
                     ),
                   ),
-                  maxLines: 3,
-                  textInputAction: TextInputAction.done,
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: AppColors.rust),
+                  ),
                 ),
-              ],
-            ),
+                maxLines: 3,
+                textInputAction: TextInputAction.done,
+              ),
+            ],
           ),
         ),
       ],

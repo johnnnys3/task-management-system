@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:task_management/data/team_store.dart';
 import 'package:task_management/models/team.dart';
+import 'package:task_management/theme/app_colors.dart';
+import 'package:task_management/theme/app_theme.dart';
+import 'package:task_management/widgets/app_card.dart';
+import 'package:task_management/widgets/avatar_badge.dart';
 
 class TeamDetailsScreen extends StatefulWidget {
   /// Team to display details for
@@ -52,6 +56,7 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.pageBg,
       appBar: _buildAppBar(context),
       body: Stack(
         children: [
@@ -66,9 +71,9 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> {
     return AppBar(
       title: Text(
         _isEditing ? 'Edit Team' : 'Team Details',
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        style: AppTheme.display(size: 20, weight: FontWeight.bold, color: AppColors.shell),
       ),
-      backgroundColor: Theme.of(context).primaryColor,
+      backgroundColor: AppColors.ink,
       elevation: 0,
       actions: [
         if (widget.isAdmin && _isEditing)
@@ -108,6 +113,10 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> {
         children: [
           if (_errorMessage.isNotEmpty) _buildErrorBanner(),
           _buildInfoCard(),
+          if (!_isEditing && team.members.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _buildMembersCard(),
+          ],
         ],
       ),
     );
@@ -118,16 +127,16 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        border: Border.all(color: Colors.red.shade200),
+        color: AppColors.blush,
+        border: Border.all(color: AppColors.rust.withOpacity(0.3)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
-          Icon(Icons.error_outline, color: Colors.red.shade700),
+          Icon(Icons.error_outline, color: AppColors.rust),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(_errorMessage, style: TextStyle(color: Colors.red.shade700)),
+            child: Text(_errorMessage, style: TextStyle(color: AppColors.rust)),
           ),
           IconButton(
             icon: const Icon(Icons.close),
@@ -139,67 +148,129 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> {
   }
 
   Widget _buildInfoCard() {
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (_isEditing)
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Team Name',
-                  border: OutlineInputBorder(),
-                ),
-                style: const TextStyle(fontSize: 18),
-              )
-            else
-              Row(
-                children: [
-                  Icon(Icons.group, color: Theme.of(context).primaryColor, size: 24),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      team.name,
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_isEditing)
+            TextFormField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                labelText: 'Team Name',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
-            const SizedBox(height: 16),
-            if (_isEditing)
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Description',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 4,
-              )
-            else
-              Text(
-                team.description.isNotEmpty ? team.description : 'No description available',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: team.description.isNotEmpty ? Colors.black87 : Colors.grey[600],
-                ),
-              ),
-            const SizedBox(height: 16),
+              style: const TextStyle(fontSize: 18),
+            )
+          else
             Row(
               children: [
-                Icon(Icons.people, color: Colors.grey[600], size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  '${team.members.length} member${team.members.length == 1 ? '' : 's'}',
-                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                AvatarBadge(name: team.name, size: 44),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        team.name,
+                        style: AppTheme.display(size: 22, weight: FontWeight.bold, color: AppColors.ink),
+                      ),
+                      const SizedBox(height: 4),
+                      _buildStatusPill(),
+                    ],
+                  ),
                 ),
               ],
             ),
-          ],
-        ),
+          const SizedBox(height: 16),
+          if (_isEditing)
+            TextFormField(
+              controller: _descriptionController,
+              decoration: InputDecoration(
+                labelText: 'Description',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              maxLines: 4,
+            )
+          else
+            Text(
+              team.description.isNotEmpty ? team.description : 'No description available',
+              style: TextStyle(
+                fontSize: 16,
+                color: team.description.isNotEmpty ? AppColors.ink : AppColors.ink3,
+              ),
+            ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Icon(Icons.people, color: AppColors.ink2, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                '${team.members.length} member${team.members.length == 1 ? '' : 's'}',
+                style: TextStyle(fontSize: 16, color: AppColors.ink2),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusPill() {
+    final isActive = team.status == TeamStatus.active;
+    final color = isActive ? AppColors.terra : AppColors.ink3;
+    final label = switch (team.status) {
+      TeamStatus.active => 'Active',
+      TeamStatus.inactive => 'Inactive',
+      TeamStatus.archived => 'Archived',
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
+      child: Text(
+        label,
+        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildMembersCard() {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Members',
+            style: AppTheme.display(size: 16, weight: FontWeight.bold, color: AppColors.ink),
+          ),
+          const SizedBox(height: 12),
+          ...team.members.entries.map((entry) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  children: [
+                    AvatarBadge(name: entry.key, size: 26),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        entry.key,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.sand,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        entry.value.value,
+                        style: TextStyle(fontSize: 10, color: AppColors.ink, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+        ],
       ),
     );
   }
@@ -254,7 +325,7 @@ class _TeamDetailsScreenState extends State<TeamDetailsScreen> {
               Navigator.pop(context);
               _deleteTeam();
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.rust, foregroundColor: Colors.white),
             child: const Text('Delete'),
           ),
         ],

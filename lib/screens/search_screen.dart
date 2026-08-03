@@ -6,10 +6,19 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:task_management/models/task.dart';
 import 'package:task_management/data/task_store.dart';
+import 'package:task_management/theme/app_colors.dart';
+import 'package:task_management/widgets/app_card.dart';
+import 'package:task_management/navigation/app_shell.dart';
 import 'task_details_screen.dart';
 
-class SearchScreen extends StatefulWidget {
+class SearchScreen extends StatefulWidget implements ShellPage {
   const SearchScreen({super.key});
+
+  @override
+  String get title => 'Search';
+
+  @override
+  String? get subtitle => null;
 
   @override
   _SearchScreenState createState() => _SearchScreenState();
@@ -187,59 +196,40 @@ class _SearchScreenState extends State<SearchScreen> {
   /// Creates modern layout with search bar, filters, and results
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      // Modern app bar with clear action
-      appBar: _buildAppBar(context),
-      // Main content with loading/error states
-      body: _isLoading ? _buildLoadingWidget() : _buildContent(),
+    return Column(
+      children: [
+        _buildActionsHeader(),
+        Expanded(child: _isLoading ? _buildLoadingWidget() : _buildContent()),
+      ],
     );
   }
 
-  /// Builds modern app bar
-  /// Includes title and clear search action
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    return AppBar(
-      title: const Text(
-        'Search Tasks',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      backgroundColor: Theme.of(context).primaryColor,
-      elevation: 0,
-      actions: [
-        // Clear search button
+  /// Clear-search and search-options actions, previously app bar actions.
+  Widget _buildActionsHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
         if (_isSearching)
           IconButton(
-            icon: const Icon(Icons.clear, color: Colors.white),
+            icon: const Icon(Icons.clear, color: AppColors.ink2),
             tooltip: 'Clear Search',
             onPressed: _clearSearch,
           ),
-        // Search options
         PopupMenuButton<String>(
-          icon: const Icon(Icons.filter_list, color: Colors.white),
+          icon: const Icon(Icons.filter_list, color: AppColors.ink2),
           tooltip: 'Search Options',
           onSelected: _handleMenuAction,
           itemBuilder: (context) => [
             const PopupMenuItem(
               value: 'filters',
               child: Row(
-                children: [
-                  Icon(Icons.tune),
-                  SizedBox(width: 8),
-                  Text('Search Filters'),
-                ],
+                children: [Icon(Icons.tune), SizedBox(width: 8), Text('Search Filters')],
               ),
             ),
             const PopupMenuItem(
               value: 'history',
               child: Row(
-                children: [
-                  Icon(Icons.history),
-                  SizedBox(width: 8),
-                  Text('Search History'),
-                ],
+                children: [Icon(Icons.history), SizedBox(width: 8), Text('Search History')],
               ),
             ),
           ],
@@ -257,14 +247,14 @@ class _SearchScreenState extends State<SearchScreen> {
         children: [
           CircularProgressIndicator(
             strokeWidth: 3,
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.terra),
           ),
           SizedBox(height: 16),
           Text(
             'Loading tasks...',
             style: TextStyle(
               fontSize: 16,
-              color: Color(0xFF757575),
+              color: AppColors.ink2,
             ),
           ),
         ],
@@ -314,27 +304,36 @@ class _SearchScreenState extends State<SearchScreen> {
   /// Builds advanced search bar
   /// Creates modern search input with clear button
   Widget _buildSearchBar() {
-    return TextField(
-      controller: _searchController,
-      autofocus: true,
-      decoration: InputDecoration(
-        hintText: 'Search tasks by title, description...',
-        prefixIcon: const Icon(Icons.search),
-        suffixIcon: _searchController.text.isNotEmpty
-            ? IconButton(
-                icon: const Icon(Icons.clear),
-                onPressed: _clearSearch,
-              )
-            : null,
-        filled: true,
-        fillColor: Colors.grey[100],
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(25),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.paper,
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: AppColors.edge),
+      ),
+      child: TextField(
+        controller: _searchController,
+        autofocus: true,
+        style: const TextStyle(color: AppColors.ink),
+        decoration: InputDecoration(
+          hintText: 'Search tasks by title, description...',
+          hintStyle: const TextStyle(color: AppColors.ink3),
+          prefixIcon: const Icon(Icons.search, color: AppColors.ink2),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear, color: AppColors.ink2),
+                  onPressed: _clearSearch,
+                )
+              : null,
+          filled: true,
+          fillColor: AppColors.paper,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(99),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
         ),
       ),
     );
@@ -348,10 +347,12 @@ class _SearchScreenState extends State<SearchScreen> {
       children: [
         // Status filters
         const Text(
-          'Status Filter',
+          'STATUS FILTER',
           style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+            color: AppColors.ink2,
           ),
         ),
         const SizedBox(height: 8),
@@ -369,18 +370,20 @@ class _SearchScreenState extends State<SearchScreen> {
                   _performSearch(_searchController.text.trim());
                 }
               },
-              selectedColor: Theme.of(context).primaryColor.withOpacity(0.2),
-              checkmarkColor: Theme.of(context).primaryColor,
+              selectedColor: AppColors.terra.withOpacity(0.2),
+              checkmarkColor: AppColors.terra,
             );
           }).toList(),
         ),
         const SizedBox(height: 16),
         // Search options
         const Text(
-          'Search In',
+          'SEARCH IN',
           style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+            color: AppColors.ink2,
           ),
         ),
         const SizedBox(height: 8),
@@ -438,9 +441,23 @@ class _SearchScreenState extends State<SearchScreen> {
     
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _searchResults.length,
+      itemCount: _searchResults.length + 1,
       itemBuilder: (context, index) {
-        final task = _searchResults[index];
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              'TASKS (${_searchResults.length})',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+                color: AppColors.ink2,
+              ),
+            ),
+          );
+        }
+        final task = _searchResults[index - 1];
         return _buildTaskCard(task);
       },
     );
@@ -461,11 +478,13 @@ class _SearchScreenState extends State<SearchScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Recent Searches',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              Text(
+                'RECENT SEARCHES',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                  color: AppColors.ink2,
                 ),
               ),
               TextButton(
@@ -474,15 +493,23 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _searchHistory.length,
-            itemBuilder: (context, index) {
-              final query = _searchHistory[index];
-              return _buildHistoryItem(query);
-            },
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _searchHistory.map((query) {
+              return OutlinedButton(
+                onPressed: () {
+                  _searchController.text = query;
+                  _onSearchChanged();
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.ink2,
+                  side: const BorderSide(color: AppColors.edge),
+                ),
+                child: Text(query),
+              );
+            }).toList(),
           ),
         ],
       ),
@@ -494,127 +521,114 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _buildTaskCard(Task task) {
     final isOverdue = !task.isCompleted && task.dueDate != null && task.dueDate!.isBefore(DateTime.now());
     
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: AppCard(
         onTap: () => _navigateToTaskDetails(task),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Task header with status
-              Row(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.task_alt, color: AppColors.rust),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      task.title,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          task.title,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.ink,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      // Status indicator
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: task.isCompleted
+                              ? AppColors.sage
+                              : isOverdue
+                                  ? AppColors.rust
+                                  : AppColors.statusReview,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          task.isCompleted
+                              ? 'Completed'
+                              : isOverdue
+                                  ? 'Overdue'
+                                  : 'Pending',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Task description
+                  if (task.description.isNotEmpty)
+                    Text(
+                      task.description,
                       style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: AppColors.ink2,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  // Status indicator
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: task.isCompleted 
-                          ? Colors.green 
-                          : isOverdue 
-                              ? Colors.red 
-                              : Colors.orange,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      task.isCompleted 
-                          ? 'Completed' 
-                          : isOverdue 
-                              ? 'Overdue' 
-                              : 'Pending',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                  const SizedBox(height: 8),
+                  // Task metadata
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.event,
+                        size: 16,
+                        color: AppColors.ink3,
                       ),
-                    ),
+                      const SizedBox(width: 4),
+                      Text(
+                        task.hasDueDate
+                            ? 'Due: ${DateFormat('MMM dd, yyyy').format(task.dueDate!)}'
+                            : 'No due date',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isOverdue ? AppColors.rust : AppColors.ink3,
+                        ),
+                      ),
+                      if (task.associatedProject?.id != null && task.associatedProject!.id.isNotEmpty) ...[
+                        const SizedBox(width: 16),
+                        const Icon(
+                          Icons.folder,
+                          size: 16,
+                          color: AppColors.ink3,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Project: ${task.associatedProject!.id}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.ink3,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              // Task description
-              if (task.description.isNotEmpty)
-                Text(
-                  task.description,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              const SizedBox(height: 8),
-              // Task metadata
-              Row(
-                children: [
-                  Icon(
-                    Icons.event,
-                    size: 16,
-                    color: Colors.grey[600],
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    task.hasDueDate 
-                        ? 'Due: ${DateFormat('MMM dd, yyyy').format(task.dueDate!)}'
-                        : 'No due date',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isOverdue ? Colors.red : Colors.grey[600],
-                    ),
-                  ),
-                  if (task.associatedProject?.id != null && task.associatedProject!.id.isNotEmpty) ...[
-                    const SizedBox(width: 16),
-                    Icon(
-                      Icons.folder,
-                      size: 16,
-                      color: Colors.grey[600],
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Project: ${task.associatedProject!.id}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-    );
-  }
-
-  /// Builds search history item
-  /// Creates clickable history item
-  Widget _buildHistoryItem(String query) {
-    return ListTile(
-      leading: const Icon(Icons.history),
-      title: Text(query),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-      onTap: () {
-        _searchController.text = query;
-        _onSearchChanged();
-      },
     );
   }
 
@@ -625,25 +639,25 @@ class _SearchScreenState extends State<SearchScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
+          const Icon(
             Icons.search_off,
             size: 64,
-            color: Colors.grey[400],
+            color: AppColors.ink3,
           ),
           const SizedBox(height: 16),
-          Text(
+          const Text(
             'No tasks found',
             style: TextStyle(
               fontSize: 18,
-              color: Colors.grey[600],
+              color: AppColors.ink2,
             ),
           ),
           const SizedBox(height: 8),
-          Text(
+          const Text(
             'Try adjusting your search or filters',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey[500],
+              color: AppColors.ink3,
             ),
           ),
         ],
@@ -658,25 +672,25 @@ class _SearchScreenState extends State<SearchScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
+          const Icon(
             Icons.history,
             size: 64,
-            color: Colors.grey[400],
+            color: AppColors.ink3,
           ),
           const SizedBox(height: 16),
-          Text(
+          const Text(
             'No search history',
             style: TextStyle(
               fontSize: 18,
-              color: Colors.grey[600],
+              color: AppColors.ink2,
             ),
           ),
           const SizedBox(height: 8),
-          Text(
+          const Text(
             'Your recent searches will appear here',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey[500],
+              color: AppColors.ink3,
             ),
           ),
         ],
@@ -694,14 +708,14 @@ class _SearchScreenState extends State<SearchScreen> {
           const Icon(
             Icons.error_outline,
             size: 64,
-            color: Colors.red,
+            color: AppColors.rust,
           ),
           const SizedBox(height: 16),
           Text(
             _errorMessage,
             style: const TextStyle(
               fontSize: 16,
-              color: Colors.black87,
+              color: AppColors.ink,
             ),
             textAlign: TextAlign.center,
           ),

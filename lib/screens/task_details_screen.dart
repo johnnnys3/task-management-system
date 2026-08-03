@@ -6,6 +6,13 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:task_management/data/task_store.dart';
 import 'package:task_management/models/task.dart';
+import 'package:task_management/theme/app_colors.dart';
+import 'package:task_management/theme/app_theme.dart';
+import 'package:task_management/widgets/app_card.dart';
+import 'package:task_management/widgets/avatar_badge.dart';
+import 'package:task_management/widgets/pill_button.dart';
+import 'package:task_management/widgets/priority_badge.dart';
+import 'package:task_management/widgets/status_chip.dart';
 
 class TaskDetailsScreen extends StatefulWidget {
   /// The task to display details for
@@ -62,33 +69,25 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                      widget.task.dueDate != null && widget.task.dueDate!.isBefore(DateTime.now());
     
     return AppBar(
-      title: const Text(
-        'Task Details',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      backgroundColor: Theme.of(context).primaryColor,
-      elevation: 0,
+      title: const Text('Task Details'),
       actions: [
         // Status indicator
         Container(
           margin: const EdgeInsets.only(right: 16),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: widget.task.isCompleted 
-                ? Colors.green 
-                : isOverdue 
-                    ? Colors.red 
-                    : Colors.orange,
+            color: widget.task.isCompleted
+                ? AppColors.statusDone
+                : isOverdue
+                    ? AppColors.rust
+                    : AppColors.statusReview,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
-            widget.task.isCompleted 
-                ? 'Completed' 
-                : isOverdue 
-                    ? 'Overdue' 
+            widget.task.isCompleted
+                ? 'Completed'
+                : isOverdue
+                    ? 'Overdue'
                     : 'Pending',
             style: const TextStyle(
               color: Colors.white,
@@ -99,7 +98,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         ),
         // More options
         PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert, color: Colors.white),
+          icon: const Icon(Icons.more_vert),
           onSelected: _handleMenuAction,
           itemBuilder: (context) => [
             const PopupMenuItem(
@@ -112,13 +111,13 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 ],
               ),
             ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'delete',
               child: Row(
                 children: [
-                  Icon(Icons.delete, color: Colors.red),
-                  SizedBox(width: 8),
-                  Text('Delete Task', style: TextStyle(color: Colors.red)),
+                  Icon(Icons.delete, color: AppColors.rust),
+                  const SizedBox(width: 8),
+                  Text('Delete Task', style: TextStyle(color: AppColors.rust)),
                 ],
               ),
             ),
@@ -167,18 +166,18 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        border: Border.all(color: Colors.red.shade200),
-        borderRadius: BorderRadius.circular(8),
+        color: AppColors.blush,
+        border: Border.all(color: AppColors.rust.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
-          Icon(Icons.error_outline, color: Colors.red.shade700),
+          Icon(Icons.error_outline, color: AppColors.rust),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               _errorMessage,
-              style: TextStyle(color: Colors.red.shade700),
+              style: TextStyle(color: AppColors.rust),
             ),
           ),
           IconButton(
@@ -220,72 +219,71 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   /// Builds task information card
   /// Displays title, status, and basic information
   Widget _buildTaskInformationCard() {
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with title and status
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    widget.task.title,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                // Status indicator
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: widget.task.isCompleted 
-                        ? Colors.green 
-                        : (_isOverdue() ? Colors.red : Colors.orange),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    widget.task.isCompleted 
-                        ? 'Completed' 
-                        : (_isOverdue() ? 'Overdue' : 'Pending'),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Description
-            if (widget.task.description.isNotEmpty) ...[
-              const Text(
-                'Description',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with title and status
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  widget.task.title,
+                  style: AppTheme.display(size: 22, weight: FontWeight.w700, color: AppColors.ink),
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                widget.task.description,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[700],
-                  height: 1.4,
+              const SizedBox(width: 8),
+              // Status indicator
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: widget.task.isCompleted
+                      ? AppColors.statusDone
+                      : (_isOverdue() ? AppColors.rust : AppColors.statusReview),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: Text(
+                  widget.task.isCompleted
+                      ? 'Completed'
+                      : (_isOverdue() ? 'Overdue' : 'Pending'),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+          // Description
+          if (widget.task.description.isNotEmpty) ...[
+            Text(
+              'Description',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppColors.ink2),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              widget.task.description,
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.ink2,
+                height: 1.4,
+              ),
+            ),
           ],
-        ),
+          const SizedBox(height: 16),
+          // Status / priority chips
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              StatusPill(status: widget.task.status),
+              PriorityBadge(priority: widget.task.priority),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -293,48 +291,38 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   /// Builds task details card
   /// Shows due date, priority, and other details
   Widget _buildTaskDetailsCard() {
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Task Details',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Due date
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Details',
+            style: AppTheme.display(size: 16, weight: FontWeight.w700, color: AppColors.ink),
+          ),
+          const SizedBox(height: 16),
+          // Due date
+          _buildDetailRow(
+            Icons.calendar_today,
+            'Due Date',
+            widget.task.dueDate != null ? _formatDate(widget.task.dueDate!) : 'No due date',
+            isOverdue: _isOverdue(),
+          ),
+          const SizedBox(height: 12),
+          // Created date
+          _buildDetailRow(
+            Icons.add_circle,
+            'Created',
+            widget.task.createdAt != null ? _formatDate(widget.task.createdAt!) : 'Unknown',
+          ),
+          const SizedBox(height: 12),
+          // Priority (if available)
+          if (widget.task.priority.name.isNotEmpty)
             _buildDetailRow(
-              Icons.calendar_today,
-              'Due Date',
-              widget.task.dueDate != null ? _formatDate(widget.task.dueDate!) : 'No due date',
-              isOverdue: _isOverdue(),
+              Icons.flag,
+              'Priority',
+              widget.task.priority.name,
             ),
-            const SizedBox(height: 12),
-            // Created date
-            _buildDetailRow(
-              Icons.add_circle,
-              'Created',
-              widget.task.createdAt != null ? _formatDate(widget.task.createdAt!) : 'Unknown',
-            ),
-            const SizedBox(height: 12),
-            // Priority (if available)
-            if (widget.task.priority.name.isNotEmpty)
-              _buildDetailRow(
-                Icons.flag,
-                'Priority',
-                widget.task.priority.name,
-              ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -378,7 +366,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       ),
                     ),
                     label: Text(member),
-                    backgroundColor: Colors.grey[100],
+                    backgroundColor: AppColors.sand,
                   );
                 }).toList(),
               )
@@ -386,7 +374,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               Text(
                 'No members assigned',
                 style: TextStyle(
-                  color: Colors.grey[600],
+                  color: AppColors.ink2,
                   fontStyle: FontStyle.italic,
                 ),
               ),
@@ -446,7 +434,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 project.description,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey[700],
+                  color: AppColors.ink2,
                 ),
               ),
             ],
@@ -457,7 +445,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               children: [
                 Icon(
                   Icons.event,
-                  color: Colors.grey[600],
+                  color: AppColors.ink2,
                   size: 16,
                 ),
                 const SizedBox(width: 4),
@@ -465,7 +453,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   'Project due: ${_formatDate(project.dueDate)}',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey[600],
+                    color: AppColors.ink2,
                   ),
                 ),
               ],
@@ -516,7 +504,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               Text(
                 'No attachments',
                 style: TextStyle(
-                  color: Colors.grey[600],
+                  color: AppColors.ink2,
                   fontStyle: FontStyle.italic,
                 ),
               ),
@@ -542,9 +530,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               widget.task.isCompleted ? 'Mark Incomplete' : 'Mark Complete',
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: widget.task.isCompleted 
-                  ? Colors.orange 
-                  : Colors.green,
+              backgroundColor: widget.task.isCompleted
+                  ? AppColors.statusReview
+                  : AppColors.sage,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
@@ -577,9 +565,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       label: Text(
         widget.task.isCompleted ? 'Incomplete' : 'Complete',
       ),
-      backgroundColor: widget.task.isCompleted 
-          ? Colors.orange 
-          : Colors.green,
+      backgroundColor: widget.task.isCompleted
+          ? AppColors.statusReview
+          : AppColors.sage,
     );
   }
 
@@ -597,7 +585,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         children: [
           Icon(
             icon,
-            color: isOverdue ? Colors.red : Colors.grey[600],
+            color: isOverdue ? AppColors.rust : AppColors.ink2,
             size: 20,
           ),
           const SizedBox(width: 12),
@@ -609,7 +597,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   label,
                   style: const TextStyle(
                     fontSize: 12,
-                    color: Colors.grey,
+                    color: AppColors.ink2,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -618,7 +606,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   value,
                   style: TextStyle(
                     fontSize: 14,
-                    color: isOverdue ? Colors.red : Colors.black87,
+                    color: isOverdue ? AppColors.rust : AppColors.ink,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -725,7 +713,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: AppColors.rust)),
           ),
         ],
       ),

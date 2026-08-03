@@ -1,470 +1,226 @@
+/// Calendar: month grid with per-status task dots, selected day's tasks
+/// rendered below as shared task rows. Body-only -- the shell owns the app bar.
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:logging/logging.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:provider/provider.dart';
 import 'package:task_management/models/task.dart';
 import 'package:task_management/data/task_store.dart';
+import 'package:task_management/screens/task_details_screen.dart';
+import 'package:task_management/screens/today_screen.dart';
+import 'package:task_management/theme/app_colors.dart';
+import 'package:task_management/theme/app_theme.dart';
+import 'package:task_management/navigation/app_shell.dart';
 
-
-
-
-
-
-class TaskCalendar extends StatefulWidget {
+class TaskCalendar extends StatefulWidget implements ShellPage {
   const TaskCalendar({super.key});
+
+  @override
+  String get title => 'Calendar';
+
+  @override
+  String? get subtitle => null;
 
   @override
   _TaskCalendarState createState() => _TaskCalendarState();
 }
 
 class _TaskCalendarState extends State<TaskCalendar> {
-  // State variables
-  DateTime _selectedDay = DateTime.now(); // Currently selected date in calendar
+  DateTime _selectedDay = DateTime.now();
+  DateTime _focusedDay = DateTime.now();
   late final TaskStore _taskStore;
-  List<Task>? _tasksForSelectedDay; // Tasks loaded for the selected day
-  final Map<DateTime, List<Task>> _taskCache = {}; // Cache to store loaded tasks by date
-  bool _isLoading = false; // Loading state indicator
+  List<Task> _allTasks = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _taskStore = context.read<TaskStore>();
-    _loadTasksForSelectedDay(); // Load tasks for today when screen initializes
+    _loadTasks();
   }
 
-  /// Loads tasks for the currently selected date
-  /// Uses caching to avoid repeated database calls for the same date
-  /// Updates loading state and handles errors gracefully
-  Future<void> _loadTasksForSelectedDay() async {
-    // Check cache first to avoid unnecessary database calls
-    if (_taskCache.containsKey(_selectedDay)) {
-      setState(() {
-        _tasksForSelectedDay = _taskCache[_selectedDay];
-      });
-      return;
-    }
-
-    // Show loading indicator while fetching data
+  /// Loads every task once so the whole visible month can show dots --
+  /// fetching per-day (the old approach) never populated days you hadn't
+  /// already tapped.
+  Future<void> _loadTasks() async {
+    setState(() => _isLoading = true);
+    final tasks = await _taskStore.fetch();
+    if (!mounted) return;
     setState(() {
-      _isLoading = true;
+      _allTasks = tasks;
+      _isLoading = false;
     });
-
-    try {
-      // Fetch tasks from database for the selected date
-      final tasks = await _taskStore.fetch(date: _selectedDay);
-      
-      // Cache the results for future use
-      _taskCache[_selectedDay] = tasks;
-      
-      // Update UI with loaded tasks
-      setState(() {
-        _tasksForSelectedDay = tasks;
-        _isLoading = false;
-      });
-    } catch (e) {
-      // Handle any errors during database operations
-      setState(() {
-        _isLoading = false;
-      });
-      // TODO: Show error message to user
-    }
   }
 
-  /// Builds the task list widget based on current state
-  /// Shows loading indicator, empty state, or task list
-  Widget _buildTaskList() {
-    if (_isLoading) {
-      // Show loading spinner while fetching tasks
-      return const Expanded(
-        child: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
+  List<Task> _tasksOn(DateTime day) =>
+      _allTasks.where((t) => t.dueDate != null && isSameDay(t.dueDate, day)).toList();
 
-    if (_tasksForSelectedDay == null || _tasksForSelectedDay!.isEmpty) {
-      // Show empty state when no tasks exist for selected day
-      return const Expanded(
-        child: Center(
-          child: Text('No tasks available for the selected day.'),
-        ),
-      );
-    }
-
-    // Show task list when tasks are available
-    return _buildTaskListView(_tasksForSelectedDay!);
+  Future<void> _toggleDone(Task task) async {
+    await _taskStore.update(task.isCompleted ? task.withStatus(TaskStatus.todo) : task.markAsCompleted());
+    _loadTasks();
   }
 
-  /// Builds the list view for displaying tasks
-  /// Includes pull-to-refresh functionality
-  /// Handles task updates through callback
-  Widget _buildTaskListView(List<Task> tasks) {
-    return Expanded(
-      child: RefreshIndicator(
-        // Allow manual refresh of task list
-        onRefresh: _loadTasksForSelectedDay,
-        child: ListView.builder(
-          itemCount: tasks.length,
-          itemBuilder: (context, index) {
-            return TaskWidget(
-              task: tasks[index],
-              // Callback to refresh list when task is updated
-              onTaskUpdated: _loadTasksForSelectedDay,
-            );
-          },
-        ),
-      ),
-    );
+  void _openTask(Task task) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => TaskDetailsScreen(task: task)))
+        .then((_) => _loadTasks());
   }
 
-  /// Main build method for the calendar screen
-  /// Creates the overall layout with calendar and task list
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Task Calendar'),
-      ),
-      body: Column(
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator(color: AppColors.terra));
+    }
+
+    final selectedTasks = _tasksOn(_selectedDay);
+
+    return RefreshIndicator(
+      onRefresh: _loadTasks,
+      child: ListView(
+        padding: const EdgeInsets.all(18),
         children: [
-          // Calendar widget with date selection and task indicators
-          TableCalendar(
-            // Dynamic date range (1 year before/after current date)
+          TableCalendar<Task>(
             firstDay: DateTime.now().subtract(const Duration(days: 365)),
             lastDay: DateTime.now().add(const Duration(days: 365)),
-            focusedDay: _selectedDay,
-            // Highlights the currently selected date
-            selectedDayPredicate: (day) {
-              return _selectedDay == day;
-            },
-            // Handles date selection and triggers task loading
+            focusedDay: _focusedDay,
+            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
             onDaySelected: (selectedDay, focusedDay) {
               setState(() {
                 _selectedDay = selectedDay;
+                _focusedDay = focusedDay;
               });
-              _loadTasksForSelectedDay(); // Load tasks for newly selected date
             },
-            // Shows task indicators on calendar dates
-            eventLoader: (day) {
-              return _taskCache[day] ?? [];
-            },
+            onPageChanged: (focusedDay) => _focusedDay = focusedDay,
+            eventLoader: _tasksOn,
+            daysOfWeekHeight: 28,
+            headerStyle: const HeaderStyle(
+              formatButtonVisible: false,
+              titleCentered: true,
+              titleTextStyle: TextStyle(color: AppColors.ink, fontWeight: FontWeight.w700, fontSize: 17),
+              leftChevronIcon: Icon(Icons.chevron_left, color: AppColors.ink2),
+              rightChevronIcon: Icon(Icons.chevron_right, color: AppColors.ink2),
+            ),
+            calendarBuilders: CalendarBuilders(
+              // Dots are drawn inside our own day cell builders below --
+              // suppress table_calendar's built-in marker overlay so they
+              // don't double up.
+              markerBuilder: (context, day, events) => null,
+              dowBuilder: (context, day) => Center(
+                child: Text(
+                  _weekdayLabel(day.weekday),
+                  style: const TextStyle(
+                      fontSize: 11.5, fontWeight: FontWeight.w700, letterSpacing: 0.5, color: AppColors.ink3),
+                ),
+              ),
+              defaultBuilder: (context, day, focusedDay) => _DayCell(day: day, tasks: _tasksOn(day)),
+              outsideBuilder: (context, day, focusedDay) =>
+                  _DayCell(day: day, tasks: const [], outside: true),
+              todayBuilder: (context, day, focusedDay) =>
+                  _DayCell(day: day, tasks: _tasksOn(day), isToday: true),
+              selectedBuilder: (context, day, focusedDay) =>
+                  _DayCell(day: day, tasks: _tasksOn(day), isSelected: true),
+            ),
           ),
-          // Task list for selected date
-          _buildTaskList(),
+          const SizedBox(height: 14),
+          Text(_selectedDayLabel(), style: AppTheme.display(size: 19)),
+          const SizedBox(height: 10),
+          if (selectedTasks.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(30),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: AppColors.sand, borderRadius: BorderRadius.circular(26)),
+              child: const Text('No tasks due this day.', style: TextStyle(color: AppColors.ink2)),
+            )
+          else
+            for (final t in selectedTasks)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: TodayTaskRow(
+                  task: t,
+                  overdue: t.isOverdue,
+                  onOpen: () => _openTask(t),
+                  onToggle: () => _toggleDone(t),
+                ),
+              ),
         ],
       ),
     );
   }
+
+  String _selectedDayLabel() {
+    const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    return '${weekdays[_selectedDay.weekday - 1]}, ${months[_selectedDay.month - 1]} ${_selectedDay.day}';
+  }
+
+  static String _weekdayLabel(int weekday) =>
+      const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][weekday - 1];
 }
 
-/// Widget for displaying individual task information
-/// Shows task status, details, and provides interaction options
-class TaskWidget extends StatelessWidget {
-  static final Logger _logger = Logger('TaskWidget');
-  final Task task; // Task data to display
-  final VoidCallback? onTaskUpdated; // Callback when task is updated
+/// 40px day cell, radius 12. Today = terra ring, selected = terra fill +
+/// shell text, up to 3 status-colored dots for days with tasks.
+class _DayCell extends StatelessWidget {
+  const _DayCell({
+    required this.day,
+    required this.tasks,
+    this.isToday = false,
+    this.isSelected = false,
+    this.outside = false,
+  });
 
-  const TaskWidget({
-    Key? key,
-    required this.task,
-    this.onTaskUpdated,
-  }) : super(key: key);
+  final DateTime day;
+  final List<Task> tasks;
+  final bool isToday;
+  final bool isSelected;
+  final bool outside;
 
-  /// Builds the task card with status indicator and details
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      elevation: 2,
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(12),
-        // Status indicator icon (check for completed, pending for incomplete)
-        leading: CircleAvatar(
-          backgroundColor: task.isCompleted ? Colors.green : Colors.blue,
-          child: Icon(
-            task.isCompleted ? Icons.check : Icons.pending,
-            color: Colors.white,
-            size: 20,
-          ),
-        ),
-        // Task title with strikethrough for completed tasks
-        title: Text(
-          task.title,
-          style: TextStyle(
-            decoration: task.isCompleted ? TextDecoration.lineThrough : null,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            // Formatted due date and time
-            Text(
-              'Due: ${task.dueDate != null ? DateFormat.yMd().add_jm().format(task.dueDate!) : 'No due date'}',
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.terra : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+              border: isToday && !isSelected ? Border.all(color: AppColors.terra, width: 1.5) : null,
+            ),
+            child: Text(
+              '${day.day}',
               style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 12,
+                fontSize: 14,
+                fontWeight: isToday || isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected
+                    ? AppColors.shell
+                    : outside
+                        ? AppColors.ink3
+                        : AppColors.ink,
               ),
             ),
-            // Task description if available
-            if (task.description.isNotEmpty) ...[
-              const SizedBox(height: 2),
-              Text(
-                task.description,
-                style: TextStyle(
-                  color: Colors.grey[700],
-                  fontSize: 12,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ],
-        ),
-        // Menu button for task actions
-        trailing: PopupMenuButton<String>(
-          onSelected: (value) {
-            _handleMenuAction(context, value);
-          },
-          itemBuilder: (context) => [
-            // Toggle completion status
-            PopupMenuItem(
-              value: 'toggle_complete',
-              child: Text(task.isCompleted ? 'Mark Incomplete' : 'Mark Complete'),
-            ),
-            // Edit task (placeholder)
-            const PopupMenuItem(
-              value: 'edit',
-              child: Text('Edit'),
-            ),
-            // Delete task (placeholder)
-            const PopupMenuItem(
-              value: 'delete',
-              child: Text('Delete'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Handles menu actions for task operations
-  /// Routes to appropriate method based on selected action
-  void _handleMenuAction(BuildContext context, String action) {
-    switch (action) {
-      case 'toggle_complete':
-        _toggleTaskCompletion(context);
-        break;
-      case 'edit':
-        _editTask(context);
-        break;
-      case 'delete':
-        _deleteTask(context);
-        break;
-    }
-  }
-
-  /// Toggles task completion status
-  /// Updates task in database and refreshes UI
-  Future<void> _toggleTaskCompletion(BuildContext context) async {
-    try {
-      // Create updated task with toggled completion status
-      final updatedTask = task.copyWith(
-        isCompleted: !task.isCompleted,
-        updatedAt: DateTime.now(),
-      );
-
-      // Update task in database
-      await context.read<TaskStore>().update(updatedTask);
-      
-      // Refresh task list to show updated status
-      onTaskUpdated?.call();
-    } catch (e) {
-      // Error logged but not shown to user as no context available
-      _logger.warning('Failed to toggle task completion: $e');
-    }
-  }
-
-  /// Opens edit dialog for task
-  /// Allows user to modify task title, description, and due date
-  Future<void> _editTask(BuildContext context) async {
-    final titleController = TextEditingController(text: task.title);
-    final descriptionController = TextEditingController(text: task.description);
-    DateTime? selectedDate = task.dueDate;
-    TimeOfDay selectedTime = task.dueDate != null 
-        ? TimeOfDay.fromDateTime(task.dueDate!)
-        : TimeOfDay.now();
-    
-    return showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Edit Task'),
-          content: SingleChildScrollView(
-            child: Column(
+          ),
+          const SizedBox(height: 3),
+          SizedBox(
+            height: 6,
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Task title input
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Task Title',
-                    border: OutlineInputBorder(),
+                for (final status in tasks.map((t) => t.status).toSet().take(3))
+                  Container(
+                    width: 4,
+                    height: 4,
+                    margin: const EdgeInsets.symmetric(horizontal: 1),
+                    decoration: BoxDecoration(color: AppColors.statusColor(status), shape: BoxShape.circle),
                   ),
-                  autofocus: true,
-                ),
-                const SizedBox(height: 16),
-                // Task description input
-                TextField(
-                  controller: descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Description',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 16),
-                // Due date picker
-                ListTile(
-                  title: const Text('Due Date'),
-                  subtitle: Text(
-                    DateFormat.yMd().add_jm().format(selectedDate ?? DateTime.now()),
-                  ),
-                  trailing: const Icon(Icons.calendar_today),
-                  onTap: () async {
-                    final DateTime? pickedDate = await showDatePicker(
-                      context: context,
-                      initialDate: selectedDate ?? DateTime.now(),
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                    );
-                    if (pickedDate != null) {
-                      final TimeOfDay? pickedTime = await showTimePicker(
-                        context: context,
-                        initialTime: selectedTime,
-                      );
-                      if (pickedTime != null) {
-                        setState(() {
-                          selectedDate = DateTime(
-                            pickedDate.year,
-                            pickedDate.month,
-                            pickedDate.day,
-                            pickedTime.hour,
-                            pickedTime.minute,
-                          );
-                          selectedTime = pickedTime;
-                        });
-                      }
-                    }
-                  },
-                ),
               ],
             ),
           ),
-          actions: [
-            // Cancel button
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            // Save button
-            ElevatedButton(
-              onPressed: () async {
-                if (titleController.text.trim().isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Task title cannot be empty')),
-                  );
-                  return;
-                }
-                
-                try {
-                  // Create updated task with new values
-                  final updatedTask = task.copyWith(
-                    title: titleController.text.trim(),
-                    description: descriptionController.text.trim(),
-                    dueDate: selectedDate,
-                    updatedAt: DateTime.now(),
-                  );
-
-                  // Update task in database
-                  await context.read<TaskStore>().update(updatedTask);
-                  
-                  // Close dialog and refresh task list
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Task updated successfully')),
-                    );
-                    onTaskUpdated?.call();
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Failed to update task: ${e.toString()}'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Shows confirmation dialog for task deletion
-  /// Handles user confirmation and deletion process
-  Future<void> _deleteTask(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Task'),
-        content: Text('Are you sure you want to delete "${task.title}"?'),
-        actions: [
-          // Cancel button - closes dialog without action
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          // Delete button - confirms deletion
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
         ],
       ),
     );
-
-    // Only proceed if user confirmed deletion
-    if (confirmed == true) {
-      try {
-        // Delete task from database
-        await context.read<TaskStore>().delete(task.id);
-        
-        // Show success message and refresh task list
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Task deleted successfully')),
-          );
-          onTaskUpdated?.call();
-        }
-      } catch (e) {
-        // Show error message if deletion fails
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to delete task: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    }
   }
 }

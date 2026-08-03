@@ -7,8 +7,14 @@ import 'package:task_management/data/team_store.dart';
 import 'package:task_management/models/team.dart';
 import 'package:task_management/screens/create_team_screen.dart';
 import 'package:task_management/screens/team_details_screen.dart';
+import 'package:task_management/theme/app_colors.dart';
+import 'package:task_management/theme/app_theme.dart';
+import 'package:task_management/widgets/app_card.dart';
+import 'package:task_management/widgets/avatar_badge.dart';
+import 'package:task_management/widgets/pill_button.dart';
+import 'package:task_management/navigation/app_shell.dart';
 
-class TeamManagementScreen extends StatefulWidget {
+class TeamManagementScreen extends StatefulWidget implements ShellPage {
   /// Current user ID for team operations
   final String userId;
   /// Admin status for permission-based actions
@@ -21,6 +27,12 @@ class TeamManagementScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
+  String get title => 'Teams';
+
+  @override
+  String? get subtitle => null;
+
+  @override
   _TeamManagementScreenState createState() => _TeamManagementScreenState();
 }
 
@@ -30,11 +42,11 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
   List<Team> _filteredTeams = [];
   bool _isLoading = false;
   String _errorMessage = '';
-  
+
   // Search and filter state
   final TextEditingController _searchController = TextEditingController();
   String _selectedFilter = 'All';
-  
+
   // Filter options
   final List<String> _filterOptions = ['All', 'Active', 'Inactive', 'My Teams'];
 
@@ -58,97 +70,93 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      // Modern app bar with search and filters
-      appBar: _buildAppBar(),
-      // Main content with loading overlay
-      body: Stack(
+    return Container(
+      color: AppColors.pageBg,
+      child: Stack(
         children: [
-          // Content with search, filters, and team list
-          _buildContent(),
-          // Loading overlay
-          if (_isLoading) _buildLoadingOverlay(),
-        ],
-      ),
-      // Floating action button for team creation
-      floatingActionButton: widget.isAdmin
-          ? FloatingActionButton.extended(
-              onPressed: _navigateToCreateTeam,
-              icon: const Icon(Icons.add),
-              label: const Text('Create Team'),
-              backgroundColor: Theme.of(context).primaryColor,
-            )
-          : null,
-    );
-  }
-
-  /// Builds modern app bar
-  /// Includes title, search, and filter options
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      title: const Text(
-        'Teams',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      backgroundColor: Theme.of(context).primaryColor,
-      elevation: 0,
-      // Search bar in app bar
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(80),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
+          Column(
             children: [
-              // Search field
-              TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search teams...',
-                  prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
+              _buildSearchAndFilterHeader(),
+              Expanded(
+                child: Stack(
+                  children: [
+                    _buildContent(),
+                    if (_isLoading) _buildLoadingOverlay(),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 8),
-              // Filter dropdown
-              DropdownButtonFormField<String>(
-                initialValue: _selectedFilter,
-                decoration: const InputDecoration(
-                  labelText: 'Filter',
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                ),
-                items: _filterOptions.map((filter) {
-                  return DropdownMenuItem(
-                    value: filter,
-                    child: Text(filter),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedFilter = value!;
-                  });
-                  _applyFilters();
-                },
               ),
             ],
           ),
-        ),
+          if (widget.isAdmin)
+            Positioned(
+              right: 16,
+              bottom: 16,
+              child: FloatingActionButton.extended(
+                onPressed: _navigateToCreateTeam,
+                icon: const Icon(Icons.add),
+                label: const Text('Create Team'),
+                backgroundColor: AppColors.terra,
+                foregroundColor: AppColors.shell,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Search bar + filter dropdown, previously the app bar's bottom.
+  Widget _buildSearchAndFilterHeader() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search teams...',
+              prefixIcon: const Icon(Icons.search),
+              filled: true,
+              fillColor: AppColors.paper,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            initialValue: _selectedFilter,
+            decoration: InputDecoration(
+              labelText: 'Filter',
+              filled: true,
+              fillColor: AppColors.paper,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
+            ),
+            items: _filterOptions.map((filter) {
+              return DropdownMenuItem(
+                value: filter,
+                child: Text(filter),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedFilter = value!;
+              });
+              _applyFilters();
+            },
+          ),
+        ],
       ),
     );
   }
@@ -179,18 +187,18 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        border: Border.all(color: Colors.red.shade200),
+        color: AppColors.blush,
+        border: Border.all(color: AppColors.rust.withOpacity(0.3)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
-          Icon(Icons.error_outline, color: Colors.red.shade700),
+          Icon(Icons.error_outline, color: AppColors.rust),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               _errorMessage,
-              style: TextStyle(color: Colors.red.shade700),
+              style: TextStyle(color: AppColors.rust),
             ),
           ),
           IconButton(
@@ -211,16 +219,16 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
   Widget _buildLoadingOverlay() {
     return Container(
       color: Colors.black.withOpacity(0.5),
-      child: const Center(
+      child: Center(
         child: Card(
           child: Padding(
-            padding: EdgeInsets.all(20),
+            padding: const EdgeInsets.all(20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Loading teams...'),
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                const Text('Loading teams...'),
               ],
             ),
           ),
@@ -235,22 +243,22 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
     final activeCount = _teams.where((team) => team.status == TeamStatus.active).length;
     final inactiveCount = _teams.where((team) => team.status == TeamStatus.inactive).length;
     final myTeamsCount = _teams.where((team) => team.members.containsKey(widget.userId)).length;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
           // Total teams
-          _buildStatCard('Total', _teams.length.toString(), Colors.blue),
+          _buildStatCard('Total', _teams.length.toString(), AppColors.ink),
           const SizedBox(width: 8),
           // Active teams
-          _buildStatCard('Active', activeCount.toString(), Colors.green),
+          _buildStatCard('Active', activeCount.toString(), AppColors.terra),
           const SizedBox(width: 8),
           // Inactive teams
-          _buildStatCard('Inactive', inactiveCount.toString(), Colors.grey),
+          _buildStatCard('Inactive', inactiveCount.toString(), AppColors.ink3),
           const SizedBox(width: 8),
           // My teams
-          _buildStatCard('My Teams', myTeamsCount.toString(), Colors.purple),
+          _buildStatCard('My Teams', myTeamsCount.toString(), AppColors.rust),
         ],
       ),
     );
@@ -266,27 +274,27 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
           Icon(
             Icons.group_outlined,
             size: 64,
-            color: Colors.grey[400],
+            color: AppColors.ink3,
           ),
           const SizedBox(height: 16),
           Text(
-            _searchController.text.isNotEmpty 
+            _searchController.text.isNotEmpty
                 ? 'No teams found matching "${_searchController.text}"'
                 : 'No teams found',
             style: TextStyle(
               fontSize: 18,
-              color: Colors.grey[600],
+              color: AppColors.ink2,
               fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            widget.isAdmin 
+            widget.isAdmin
                 ? 'Create a new team to get started'
                 : 'Contact an admin to create teams',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey[500],
+              color: AppColors.ink3,
             ),
           ),
         ],
@@ -302,7 +310,7 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
         _isLoading = true;
         _errorMessage = '';
       });
-      
+
       final loadedTeams = await _teamStore.fetch();
 
       setState(() {
@@ -335,10 +343,10 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
         final matchesSearch = _searchController.text.isEmpty ||
             team.name.toLowerCase().contains(_searchController.text.toLowerCase()) ||
             team.description.toLowerCase().contains(_searchController.text.toLowerCase());
-        
+
         // Apply status filter
         final matchesFilter = _matchesFilter(team);
-        
+
         return matchesSearch && matchesFilter;
       }).toList();
     });
@@ -399,7 +407,7 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text('Delete', style: TextStyle(color: AppColors.rust)),
           ),
         ],
       ),
@@ -411,7 +419,7 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
           _isLoading = true;
           _errorMessage = '';
         });
-        
+
         await _teamStore.delete(team.id);
         await _loadTeams();
         _showSuccessSnackBar('Team deleted successfully');
@@ -442,7 +450,7 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
             ),
           ],
         ),
-        backgroundColor: Colors.green[600],
+        backgroundColor: AppColors.terra,
         duration: const Duration(seconds: 3),
         action: SnackBarAction(
           label: 'Dismiss',
@@ -455,10 +463,17 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
     );
   }
 
-  /// Builds team list
-  /// Displays teams in a scrollable list
+  /// Builds responsive team grid
+  /// Displays teams in a responsive card grid
   Widget _buildTeamList() {
-    return ListView.builder(
+    return GridView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 340,
+        mainAxisSpacing: 11,
+        crossAxisSpacing: 11,
+        mainAxisExtent: 360,
+      ),
       itemCount: _filteredTeams.length,
       itemBuilder: (context, index) {
         final team = _filteredTeams[index];
@@ -466,6 +481,7 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
           team: team,
           onTap: () => _navigateToTeamDetails(team),
           onDeleteTeam: widget.isAdmin ? () => _deleteTeam(team) : null,
+          isMember: team.members.containsKey(widget.userId),
         );
       },
     );
@@ -475,32 +491,24 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
   /// Creates styled card for team count
   Widget _buildStatCard(String label, String count, Color color) {
     return Expanded(
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            children: [
-              Text(
-                count,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
+      child: AppCard(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Text(
+              count,
+              style: AppTheme.display(size: 20, weight: FontWeight.bold, color: color),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.ink2,
+                fontWeight: FontWeight.w500,
               ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -528,139 +536,137 @@ class TeamListItem extends StatelessWidget {
     this.isMember = false,
   }) : super(key: key);
 
+  Color get _statusColor => team.status == TeamStatus.active ? AppColors.terra : AppColors.ink3;
+
+  String get _statusLabel {
+    switch (team.status) {
+      case TeamStatus.active:
+        return 'Active';
+      case TeamStatus.inactive:
+        return 'Inactive';
+      case TeamStatus.archived:
+        return 'Archived';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 3,
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
+    return AppCard(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with name and status
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      team.name,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with avatar, name and status
+            Row(
+              children: [
+                AvatarBadge(name: team.name),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        team.name,
+                        style: AppTheme.display(size: 18, weight: FontWeight.bold, color: AppColors.ink),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                      const SizedBox(height: 2),
+                      Text(
+                        '${team.members.length} member${team.members.length == 1 ? '' : 's'} · ${team.projects.length} project${team.projects.length == 1 ? '' : 's'}',
+                        style: TextStyle(fontSize: 12, color: AppColors.ink2),
+                      ),
+                    ],
+                  ),
+                ),
+                // Status badge
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _statusColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    _statusLabel,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  // Status badge
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Description
+            if (team.description.isNotEmpty)
+              Text(
+                team.description,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.ink2,
+                  height: 1.4,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            if (team.description.isNotEmpty) const SizedBox(height: 12),
+            // Member list
+            if (team.members.isNotEmpty) ...[
+              ...team.members.entries.take(3).map((entry) => _MemberRow(userId: entry.key, role: entry.value)),
+              const SizedBox(height: 4),
+            ],
+            // Footer with member badge and actions
+            Row(
+              children: [
+                const Spacer(),
+                // Member badge
+                if (isMember)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                      horizontal: 6,
+                      vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: team.status == TeamStatus.active ? Colors.green : Colors.grey,
-                      borderRadius: BorderRadius.circular(12),
+                      color: AppColors.rust,
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(
-                      team.status == TeamStatus.active ? 'Active' : 'Inactive',
-                      style: const TextStyle(
+                    child: const Text(
+                      'Member',
+                      style: TextStyle(
                         color: Colors.white,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Description
-              if (team.description.isNotEmpty)
-                Text(
-                  team.description,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                    height: 1.4,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              const SizedBox(height: 12),
-              // Footer with member count and actions
-              Row(
-                children: [
-                  // Member count
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.people,
-                        size: 16,
-                        color: Colors.grey[600],
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${team.members.length} member${team.members.length == 1 ? '' : 's'}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
+                const SizedBox(width: 8),
+                // More options button
+                if (onDeleteTeam != null)
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert),
+                    onSelected: (value) => _handleMenuAction(value),
+                    itemBuilder: (context) => [
+                      if (onDeleteTeam != null)
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete, size: 18, color: AppColors.rust),
+                              const SizedBox(width: 8),
+                              Text('Delete', style: TextStyle(color: AppColors.rust)),
+                            ],
+                          ),
                         ),
-                      ),
                     ],
                   ),
-                  const Spacer(),
-                  // Member badge
-                  if (isMember)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.purple,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'Member',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(width: 8),
-                  // More options button
-                  if (onDeleteTeam != null)
-                    PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert),
-                      onSelected: (value) => _handleMenuAction(value),
-                      itemBuilder: (context) => [
-                        if (onDeleteTeam != null)
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete, size: 18, color: Colors.red),
-                                SizedBox(width: 8),
-                                Text('Delete', style: TextStyle(color: Colors.red)),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                ],
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ),
-      ),
     );
   }
 
@@ -673,5 +679,43 @@ class TeamListItem extends StatelessWidget {
         break;
     }
   }
+}
 
+/// Single member row: avatar, name, role pill.
+class _MemberRow extends StatelessWidget {
+  final String userId;
+  final TeamRole role;
+
+  const _MemberRow({required this.userId, required this.role});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          AvatarBadge(name: userId, size: 26),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              userId,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: AppColors.sand,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              role.value,
+              style: TextStyle(fontSize: 10, color: AppColors.ink, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

@@ -3,7 +3,43 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:task_management/data/project_store.dart';
 import 'package:task_management/models/project.dart';
+import 'package:task_management/theme/app_colors.dart';
+import 'package:task_management/theme/app_theme.dart';
+import 'package:task_management/widgets/app_card.dart';
 import 'package:task_management/widgets/entity_form_scaffold.dart';
+import 'package:task_management/widgets/pill_button.dart';
+
+/// Color for a given [ProjectStatus], matching the TaskHub palette.
+Color projectStatusColor(ProjectStatus status) {
+  switch (status) {
+    case ProjectStatus.planning:
+      return AppColors.ink3;
+    case ProjectStatus.inProgress:
+      return AppColors.terra;
+    case ProjectStatus.onHold:
+      return const Color(0xFFC08A3E);
+    case ProjectStatus.completed:
+      return AppColors.sage;
+    case ProjectStatus.cancelled:
+      return AppColors.ink3;
+  }
+}
+
+/// Display label for a given [ProjectStatus].
+String projectStatusLabel(ProjectStatus status) {
+  switch (status) {
+    case ProjectStatus.planning:
+      return 'Planning';
+    case ProjectStatus.inProgress:
+      return 'In Progress';
+    case ProjectStatus.onHold:
+      return 'On Hold';
+    case ProjectStatus.completed:
+      return 'Completed';
+    case ProjectStatus.cancelled:
+      return 'Cancelled';
+  }
+}
 
 class CreateProjectScreen extends StatefulWidget {
   const CreateProjectScreen({super.key});
@@ -18,6 +54,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
   final TextEditingController projectDescriptionController = TextEditingController();
   DateTime selectedDueDate = DateTime.now();
   TimeOfDay selectedDueTime = TimeOfDay.now();
+  ProjectStatus _selectedStatus = ProjectStatus.planning;
   bool _isLoading = false;
   String _errorMessage = '';
 
@@ -62,6 +99,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
         tasks: const [],
         id: '',
         isCompleted: false,
+        status: _selectedStatus,
       );
 
       await _projectStore.create(newProject);
@@ -141,137 +179,161 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
       onDismissError: () => setState(() => _errorMessage = ''),
       onSave: _createProject,
       saveTooltip: 'Save Project',
+      bottomNavigationBar: _buildBottomActions(),
       children: [
-        Card(
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Project Details',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).primaryColor,
-                  ),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Project Details',
+                style: AppTheme.display(size: 20, color: AppColors.ink),
+              ),
+              const SizedBox(height: 24),
+              TextFormField(
+                controller: projectNameController,
+                validator: Project.validateName,
+                decoration: const InputDecoration(
+                  labelText: 'Project Name *',
+                  hintText: 'Enter project name',
+                  prefixIcon: Icon(Icons.title),
                 ),
-                const SizedBox(height: 24),
-                TextFormField(
-                  controller: projectNameController,
-                  validator: Project.validateName,
-                  decoration: InputDecoration(
-                    labelText: 'Project Name *',
-                    hintText: 'Enter project name',
-                    prefixIcon: const Icon(Icons.title),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).primaryColor,
-                        width: 2,
-                      ),
-                    ),
-                    errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Colors.red),
-                    ),
-                  ),
-                  textInputAction: TextInputAction.next,
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: projectDescriptionController,
+                validator: Project.validateDescription,
+                decoration: const InputDecoration(
+                  labelText: 'Project Description *',
+                  hintText: 'Enter project description',
+                  prefixIcon: Icon(Icons.description),
                 ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  controller: projectDescriptionController,
-                  validator: Project.validateDescription,
-                  decoration: InputDecoration(
-                    labelText: 'Project Description *',
-                    hintText: 'Enter project description',
-                    prefixIcon: const Icon(Icons.description),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).primaryColor,
-                        width: 2,
-                      ),
-                    ),
-                    errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Colors.red),
-                    ),
-                  ),
-                  maxLines: 3,
-                  textInputAction: TextInputAction.done,
-                ),
-                const SizedBox(height: 20),
-                InkWell(
-                  onTap: () => _selectDateTime(context),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Theme.of(context).primaryColor.withOpacity(0.5),
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.schedule,
-                          color: Theme.of(context).primaryColor,
+                maxLines: 3,
+                textInputAction: TextInputAction.done,
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Status',
+                style: AppTheme.display(size: 14, color: AppColors.ink2),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: ProjectStatus.values.map((status) {
+                  final color = projectStatusColor(status);
+                  final selected = status == _selectedStatus;
+                  final pill = PillButton(
+                    label: projectStatusLabel(status),
+                    outlined: !selected,
+                    onPressed: () => setState(() => _selectedStatus = status),
+                  );
+                  if (!selected) return pill;
+                  return Theme(
+                    data: Theme.of(context).copyWith(
+                      elevatedButtonTheme: ElevatedButtonThemeData(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: color,
+                          foregroundColor: AppColors.shell,
+                          textStyle: AppTheme.display(size: 14, color: AppColors.shell),
+                          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
+                          shape: const StadiumBorder(),
+                          elevation: 0,
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Due Date & Time',
-                                style: TextStyle(
-                                  color: Theme.of(context).primaryColor,
-                                  fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    child: pill,
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 20),
+              InkWell(
+                onTap: () => _selectDateTime(context),
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.edge),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.schedule, color: AppColors.terra),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Due Date & Time',
+                              style: TextStyle(
+                                color: AppColors.terra,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              DateFormat.yMd().add_jm().format(
+                                DateTime(
+                                  selectedDueDate.year,
+                                  selectedDueDate.month,
+                                  selectedDueDate.day,
+                                  selectedDueTime.hour,
+                                  selectedDueTime.minute,
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                DateFormat.yMd().add_jm().format(
-                                  DateTime(
-                                    selectedDueDate.year,
-                                    selectedDueDate.month,
-                                    selectedDueDate.day,
-                                    selectedDueTime.hour,
-                                    selectedDueTime.minute,
-                                  ),
-                                ),
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 14,
-                                ),
+                              style: const TextStyle(
+                                color: AppColors.ink2,
+                                fontSize: 14,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        Icon(
-                          Icons.arrow_drop_down,
-                          color: Theme.of(context).primaryColor,
-                        ),
-                      ],
-                    ),
+                      ),
+                      const Icon(Icons.arrow_drop_down, color: AppColors.terra),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildBottomActions() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.paper,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.ink.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: PillButton(
+              label: 'Cancel',
+              outlined: true,
+              onPressed: _isLoading ? null : () => Navigator.pop(context),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: PillButton(
+              label: 'Create Project',
+              onPressed: _isLoading ? null : _createProject,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

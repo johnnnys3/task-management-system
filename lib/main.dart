@@ -18,6 +18,7 @@ import 'package:task_management/data/team_store.dart';
 import 'package:task_management/provider/task_list_notifier.dart';
 import 'package:task_management/screens/home_screen.dart';
 import 'package:task_management/screens/login_screen.dart';
+import 'package:task_management/theme/app_theme.dart';
 
 /// Global logger for application-wide logging
 final Logger _logger = Logger('TaskManagementApp');
@@ -163,127 +164,11 @@ class TaskManagementApp extends StatelessWidget {
     );
   }
 
-  /// Builds the primary light theme
-  /// Material Design 3 with orange accent and comprehensive styling
-  ThemeData _buildTheme() {
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.orange,
-        brightness: Brightness.light,
-      ),
-      
-      // App bar theming
-      appBarTheme: const AppBarTheme(
-        elevation: 2,
-        centerTitle: true,
-        scrolledUnderElevation: 4,
-        titleTextStyle: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
-        ),
-      ),
-      
-      // Card theming
-      cardTheme: CardThemeData(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      ),
-      
-      // Elevated button theming
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 2,
-        ),
-      ),
-      
-      // Input decoration theming
-      inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        filled: true,
-        fillColor: Colors.grey[50],
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
-      ),
-      
-      // Visual density and spacing
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      
-      // Typography
-        textTheme: const TextTheme(
-          headlineLarge: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-          ),
-          headlineMedium: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w600,
-          ),
-          bodyLarge: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.normal,
-          ),
-          bodyMedium: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.normal,
-          ),
-        ),
-    );
-  }
+  /// Builds the primary light theme (TaskHub redesign tokens).
+  ThemeData _buildTheme() => AppTheme.light();
 
-  /// Builds the dark theme
-  /// Material Design 3 dark theme with orange accent
-  ThemeData _buildDarkTheme() {
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.orange,
-        brightness: Brightness.dark,
-      ),
-      
-      // Dark theme specific configurations
-      appBarTheme: const AppBarTheme(
-        elevation: 0,
-        centerTitle: true,
-        scrolledUnderElevation: 2,
-      ),
-      
-      cardTheme: CardThemeData(
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      ),
-      
-      // Apply same theming as light theme
-      inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        filled: true,
-        fillColor: Colors.grey[800],
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
-      ),
-      
-      visualDensity: VisualDensity.adaptivePlatformDensity,
-    );
-  }
+  /// Builds the dark theme (TaskHub redesign tokens on a dark surface).
+  ThemeData _buildDarkTheme() => AppTheme.dark();
 }
 
 /// Authentication wrapper widget with comprehensive user state management

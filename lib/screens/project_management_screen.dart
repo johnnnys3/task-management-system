@@ -10,8 +10,46 @@ import 'package:task_management/screens/project_details_screen.dart';
 import 'package:task_management/screens/create_project_screen.dart';
 import 'package:task_management/screens/update_project_screen.dart';
 import 'package:intl/intl.dart';
+import 'package:task_management/theme/app_colors.dart';
+import 'package:task_management/theme/app_theme.dart';
+import 'package:task_management/widgets/app_card.dart';
+import 'package:task_management/widgets/pill_button.dart';
+import 'package:task_management/widgets/progress_bar.dart';
+import 'package:task_management/navigation/app_shell.dart';
 
-class ProjectManagementScreen extends StatefulWidget {
+/// Local color mapping for [TaskProject.ProjectStatus], not reused widely
+/// enough to warrant a home in AppColors.
+Color _projectStatusColor(TaskProject.ProjectStatus status) {
+  switch (status) {
+    case TaskProject.ProjectStatus.planning:
+      return AppColors.ink3;
+    case TaskProject.ProjectStatus.inProgress:
+      return AppColors.terra;
+    case TaskProject.ProjectStatus.onHold:
+      return const Color(0xFFC08A3E); // amber
+    case TaskProject.ProjectStatus.completed:
+      return AppColors.sage;
+    case TaskProject.ProjectStatus.cancelled:
+      return AppColors.ink3;
+  }
+}
+
+String _projectStatusLabel(TaskProject.ProjectStatus status) {
+  switch (status) {
+    case TaskProject.ProjectStatus.planning:
+      return 'Planning';
+    case TaskProject.ProjectStatus.inProgress:
+      return 'Active';
+    case TaskProject.ProjectStatus.onHold:
+      return 'On Hold';
+    case TaskProject.ProjectStatus.completed:
+      return 'Completed';
+    case TaskProject.ProjectStatus.cancelled:
+      return 'Cancelled';
+  }
+}
+
+class ProjectManagementScreen extends StatefulWidget implements ShellPage {
   /// User ID for filtering projects
   final String userId;
   /// Current user object for role-based access
@@ -19,11 +57,17 @@ class ProjectManagementScreen extends StatefulWidget {
   /// Admin status for permission control
   final bool isAdmin;
 
-  const ProjectManagementScreen({super.key, 
-    required this.userId, 
-    required this.user, 
+  const ProjectManagementScreen({super.key,
+    required this.userId,
+    required this.user,
     required this.isAdmin
   });
+
+  @override
+  String get title => 'Projects';
+
+  @override
+  String? get subtitle => null;
 
   @override
   _ProjectManagementScreenState createState() => _ProjectManagementScreenState();
@@ -98,96 +142,73 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
   Widget build(BuildContext context) {
     super.build(context);
 
-    return Scaffold(
-      // Modern app bar with search and actions
-      appBar: _buildAppBar(context),
-      // Main content with loading/error states
-      body: _isLoading ? _buildLoadingWidget() : _buildContent(),
-      // Floating action button for creating projects
-      floatingActionButton: widget.isAdmin ? _buildFloatingActionButton() : null,
+    return Stack(
+      children: [
+        Column(
+          children: [
+            _buildSearchAndFilterHeader(),
+            Expanded(child: _isLoading ? _buildLoadingWidget() : _buildContent()),
+          ],
+        ),
+        if (widget.isAdmin)
+          Positioned(right: 16, bottom: 16, child: _buildFloatingActionButton()),
+      ],
     );
   }
 
-  /// Builds modern app bar with search and filtering
-  /// Includes title, search bar, and filter options
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    return AppBar(
-      title: const Text(
-        'Projects',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      backgroundColor: Theme.of(context).primaryColor,
-      elevation: 0,
-      // Search and filter actions
-      actions: [
-        // Filter dropdown
-        PopupMenuButton<String>(
-          icon: const Icon(Icons.filter_list, color: Colors.white),
-          tooltip: 'Filter Projects',
-          onSelected: (String filter) {
-            setState(() {
-              _selectedFilter = filter;
-              _applyFilters();
-            });
-          },
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'All',
-              child: Text('All Projects'),
-            ),
-            const PopupMenuItem(
-              value: 'Active',
-              child: Text('Active Projects'),
-            ),
-            const PopupMenuItem(
-              value: 'Completed',
-              child: Text('Completed Projects'),
-            ),
-            const PopupMenuItem(
-              value: 'Overdue',
-              child: Text('Overdue Projects'),
-            ),
-          ],
-        ),
-        // Refresh button
-        IconButton(
-          icon: const Icon(Icons.refresh, color: Colors.white),
-          tooltip: 'Refresh Projects',
-          onPressed: _refreshProjects,
-        ),
-      ],
-      // Search bar in app bar
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(60),
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Search projects...',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: _clearSearch,
-                    )
-                  : null,
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(25),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 12,
+  /// Search bar + filter/refresh row, previously the app bar's bottom + actions.
+  Widget _buildSearchAndFilterHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search projects...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: _clearSearch,
+                      )
+                    : null,
+                filled: true,
+                fillColor: AppColors.paper,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
             ),
           ),
-        ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.filter_list, color: AppColors.ink),
+            tooltip: 'Filter Projects',
+            onSelected: (String filter) {
+              setState(() {
+                _selectedFilter = filter;
+                _applyFilters();
+              });
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: 'All', child: Text('All Projects')),
+              const PopupMenuItem(value: 'Active', child: Text('Active Projects')),
+              const PopupMenuItem(value: 'Completed', child: Text('Completed Projects')),
+              const PopupMenuItem(value: 'Overdue', child: Text('Overdue Projects')),
+            ],
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh, color: AppColors.ink),
+            tooltip: 'Refresh Projects',
+            onPressed: _refreshProjects,
+          ),
+        ],
       ),
     );
   }
@@ -201,14 +222,14 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
         children: [
           const CircularProgressIndicator(
             strokeWidth: 3,
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.terra),
           ),
           const SizedBox(height: 16),
           Text(
             'Loading projects...',
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey.shade600,
+              color: AppColors.ink2,
             ),
           ),
         ],
@@ -256,7 +277,7 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Theme.of(context).primaryColor.withOpacity(0.1),
+        color: AppColors.terra.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -278,33 +299,36 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
       children: [
         Icon(
           icon,
-          color: Theme.of(context).primaryColor,
+          color: AppColors.terra,
           size: 24,
         ),
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+          style: AppTheme.display(size: 18, color: AppColors.ink),
         ),
         Text(
           label,
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey[600],
+            color: AppColors.ink2,
           ),
         ),
       ],
     );
   }
 
-  /// Builds modern project list
+  /// Builds responsive project grid
   /// Displays filtered projects with enhanced cards and actions
   Widget _buildProjectList() {
-    return ListView.builder(
+    return GridView.builder(
       padding: const EdgeInsets.all(8),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 340,
+        mainAxisSpacing: 11,
+        crossAxisSpacing: 11,
+        mainAxisExtent: 268,
+      ),
       itemCount: filteredProjects.length,
       itemBuilder: (context, index) {
         final project = filteredProjects[index];
@@ -318,58 +342,51 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
   Widget _buildProjectCard(TaskProject.Project project) {
     final isOverdue = !project.isCompleted && project.dueDate.isBefore(DateTime.now());
     final daysUntilDue = project.dueDate.difference(DateTime.now()).inDays;
-    
-    return Card(
-      elevation: project.isCompleted ? 1 : 3,
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+    final statusColor = _projectStatusColor(project.status);
+    final total = project.tasks.length;
+    final done = project.completedTasksCount;
+    final progress = total == 0 ? 0.0 : done / total;
+
+    return AppCard(
         onTap: () => _navigateToProjectDetailsScreen(project),
-        onLongPress: widget.isAdmin ? () => _showOptionsDialog(project) : null,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
+        child: InkWell(
+          onLongPress: widget.isAdmin ? () => _showOptionsDialog(project) : null,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Project header with status
+              // Project header with color swatch and status
               Row(
                 children: [
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: AppColors.avatarColor(project.id),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       project.name,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: project.isCompleted ? Colors.grey[600] : Colors.black87,
-                      ),
+                      style: AppTheme.display(size: 18, color: AppColors.ink),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  // Status indicator
+                  // Status pill
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: project.isCompleted 
-                          ? Colors.green 
-                          : isOverdue 
-                              ? Colors.red 
-                              : Colors.orange,
-                      borderRadius: BorderRadius.circular(12),
+                      color: statusColor.withOpacity(0.16),
+                      borderRadius: BorderRadius.circular(99),
                     ),
                     child: Text(
-                      project.isCompleted 
-                          ? 'Completed' 
-                          : isOverdue 
-                              ? 'Overdue' 
-                              : 'Active',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      _projectStatusLabel(project.status),
+                      style: TextStyle(
+                        color: statusColor,
                         fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -382,26 +399,38 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
                   project.description,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.grey[600],
+                    color: AppColors.ink2,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
+              // Completion progress
+              Text(
+                '$done of $total done',
+                style: TextStyle(fontSize: 13, color: AppColors.ink2, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 6),
+              AppProgressBar(value: progress, color: AppColors.terra),
+              const SizedBox(height: 12),
               // Project metadata
               Row(
                 children: [
                   Icon(
                     Icons.event,
                     size: 16,
-                    color: Colors.grey[600],
+                    color: isOverdue ? AppColors.rust : AppColors.ink2,
                   ),
                   const SizedBox(width: 4),
-                  Text(
-                    'Due: ${DateFormat('MMM dd, yyyy').format(project.dueDate)}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isOverdue ? Colors.red : Colors.grey[600],
+                  Flexible(
+                    child: Text(
+                      'Due: ${DateFormat('MMM dd, yyyy').format(project.dueDate)}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isOverdue ? AppColors.rust : AppColors.ink2,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
                   ),
                   if (!project.isCompleted && daysUntilDue >= 0) ...[
@@ -409,13 +438,13 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                       decoration: BoxDecoration(
-                        color: daysUntilDue <= 3 ? Colors.red : Colors.blue,
+                        color: daysUntilDue <= 3 ? AppColors.rust : AppColors.terra,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         '$daysUntilDue days',
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: AppColors.shell,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -436,7 +465,7 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
                       onPressed: () => _editProject(project),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                      icon: Icon(Icons.delete, size: 20, color: AppColors.rust),
                       tooltip: 'Delete Project',
                       onPressed: () => _showDeleteConfirmation(project),
                     ),
@@ -446,7 +475,6 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
             ],
           ),
         ),
-      ),
     );
   }
 
@@ -457,17 +485,17 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
+          Icon(
             Icons.error_outline,
             size: 64,
-            color: Colors.red,
+            color: AppColors.rust,
           ),
           const SizedBox(height: 16),
           Text(
             _errorMessage,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
-              color: Colors.black87,
+              color: AppColors.ink,
             ),
             textAlign: TextAlign.center,
           ),
@@ -491,16 +519,16 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
           Icon(
             Icons.folder_open,
             size: 64,
-            color: Colors.grey[400],
+            color: AppColors.ink3,
           ),
           const SizedBox(height: 16),
           Text(
-            _searchQuery.isNotEmpty 
+            _searchQuery.isNotEmpty
                 ? 'No projects found matching "$_searchQuery"'
                 : 'No projects available',
             style: TextStyle(
               fontSize: 18,
-              color: Colors.grey[600],
+              color: AppColors.ink2,
             ),
           ),
           const SizedBox(height: 8),
@@ -509,7 +537,7 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
               'Tap the + button to create your first project',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey[500],
+                color: AppColors.ink3,
               ),
             ),
         ],
@@ -570,7 +598,7 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.edit, color: Colors.blue),
+              leading: Icon(Icons.edit, color: AppColors.terra),
               title: const Text('Edit Project'),
               onTap: () {
                 Navigator.pop(context);
@@ -578,7 +606,7 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
+              leading: Icon(Icons.delete, color: AppColors.rust),
               title: const Text('Delete Project'),
               onTap: () {
                 Navigator.pop(context);
@@ -634,8 +662,8 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
               _deleteProject(project);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              backgroundColor: AppColors.rust,
+              foregroundColor: AppColors.shell,
             ),
             child: const Text('Delete'),
           ),
@@ -719,21 +747,21 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.white),
+            Icon(Icons.check_circle, color: AppColors.shell),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 message,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: AppColors.shell),
               ),
             ),
           ],
         ),
-        backgroundColor: Colors.green[600],
+        backgroundColor: AppColors.sage,
         duration: const Duration(seconds: 3),
         action: SnackBarAction(
           label: 'Dismiss',
-          textColor: Colors.white,
+          textColor: AppColors.shell,
           onPressed: () {
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
           },
@@ -750,21 +778,21 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen>
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.error, color: Colors.white),
+            Icon(Icons.error, color: AppColors.shell),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 message,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: AppColors.shell),
               ),
             ),
           ],
         ),
-        backgroundColor: Colors.red[600],
+        backgroundColor: AppColors.rust,
         duration: const Duration(seconds: 4),
         action: SnackBarAction(
           label: 'Dismiss',
-          textColor: Colors.white,
+          textColor: AppColors.shell,
           onPressed: () {
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
           },

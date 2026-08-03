@@ -6,7 +6,12 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:task_management/data/project_store.dart';
 import 'package:task_management/models/project.dart';
+import 'package:task_management/screens/create_project_screen.dart' show projectStatusColor, projectStatusLabel;
+import 'package:task_management/theme/app_colors.dart';
+import 'package:task_management/theme/app_theme.dart';
+import 'package:task_management/widgets/app_card.dart';
 import 'package:task_management/widgets/entity_form_scaffold.dart';
+import 'package:task_management/widgets/pill_button.dart';
 
 class UpdateProjectScreen extends StatefulWidget {
   /// Project to be updated
@@ -36,6 +41,7 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
   // State variables
   late DateTime _dueDate;
   bool _isCompleted = false;
+  late ProjectStatus _selectedStatus;
   bool _isLoading = false;
   String _errorMessage = '';
   
@@ -70,6 +76,7 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
     _descriptionController.text = widget.project.description;
     _dueDate = widget.project.dueDate;
     _isCompleted = widget.project.isCompleted;
+    _selectedStatus = widget.project.status;
   }
 
   /// Updates project with validation and error handling
@@ -98,6 +105,7 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
         tasks: widget.project.tasks,
         id: widget.project.id,
         isCompleted: _isCompleted,
+        status: _selectedStatus,
         updatedAt: DateTime.now(),
       );
 
@@ -136,6 +144,9 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
         // Project description field
         _buildDescriptionField(),
         const SizedBox(height: 24),
+        // Status picker
+        _buildStatusPicker(),
+        const SizedBox(height: 24),
         // Due date picker
         _buildDueDateField(),
         const SizedBox(height: 24),
@@ -156,26 +167,10 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
       controller: _nameController,
       focusNode: _nameFocusNode,
       validator: Project.validateName,
-      decoration: InputDecoration(
+      decoration: const InputDecoration(
         labelText: 'Project Name',
         hintText: 'Enter project name',
-        prefixIcon: const Icon(Icons.title),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: Theme.of(context).primaryColor,
-            width: 2,
-          ),
-        ),
-        filled: true,
-        fillColor: Colors.grey[50],
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
+        prefixIcon: Icon(Icons.title),
       ),
       textInputAction: TextInputAction.next,
       onFieldSubmitted: (_) {
@@ -186,10 +181,54 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
         return Text(
           '$currentLength/$maxLength',
           style: TextStyle(
-            color: currentLength > (maxLength ?? 100) * 0.8 ? Colors.red : Colors.grey,
+            color: currentLength > (maxLength ?? 100) * 0.8 ? AppColors.rust : AppColors.ink3,
           ),
         );
       },
+    );
+  }
+
+  /// Builds status picker
+  /// Wrap of pill buttons for each [ProjectStatus], colored by status
+  Widget _buildStatusPicker() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Status',
+          style: AppTheme.display(size: 14, color: AppColors.ink2),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: ProjectStatus.values.map((status) {
+            final color = projectStatusColor(status);
+            final selected = status == _selectedStatus;
+            final pill = PillButton(
+              label: projectStatusLabel(status),
+              outlined: !selected,
+              onPressed: () => setState(() => _selectedStatus = status),
+            );
+            if (!selected) return pill;
+            return Theme(
+              data: Theme.of(context).copyWith(
+                elevatedButtonTheme: ElevatedButtonThemeData(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: color,
+                    foregroundColor: AppColors.shell,
+                    textStyle: AppTheme.display(size: 14, color: AppColors.shell),
+                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
+                    shape: const StadiumBorder(),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+              child: pill,
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 
@@ -201,26 +240,10 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
       focusNode: _descriptionFocusNode,
       validator: Project.validateDescription,
       maxLines: 5,
-      decoration: InputDecoration(
+      decoration: const InputDecoration(
         labelText: 'Description',
         hintText: 'Enter project description',
-        prefixIcon: const Icon(Icons.description),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: Theme.of(context).primaryColor,
-            width: 2,
-          ),
-        ),
-        filled: true,
-        fillColor: Colors.grey[50],
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
+        prefixIcon: Icon(Icons.description),
       ),
       textInputAction: TextInputAction.done,
       maxLength: 500,
@@ -228,7 +251,7 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
         return Text(
           '$currentLength/$maxLength',
           style: TextStyle(
-            color: currentLength > (maxLength ?? 100) * 0.8 ? Colors.red : Colors.grey,
+            color: currentLength > (maxLength ?? 100) * 0.8 ? AppColors.rust : AppColors.ink3,
           ),
         );
       },
@@ -240,30 +263,27 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
   Widget _buildDueDateField() {
     return InkWell(
       onTap: _selectDueDate,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey[300]!),
-          borderRadius: BorderRadius.circular(12),
-          color: Colors.grey[50],
+          border: Border.all(color: AppColors.edge),
+          borderRadius: BorderRadius.circular(16),
+          color: AppColors.paper,
         ),
         child: Row(
           children: [
-            Icon(
-              Icons.calendar_today,
-              color: Theme.of(context).primaryColor,
-            ),
+            const Icon(Icons.calendar_today, color: AppColors.terra),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'Due Date',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey[600],
+                      color: AppColors.ink2,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -273,15 +293,13 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
+                      color: AppColors.ink,
                     ),
                   ),
                 ],
               ),
             ),
-            Icon(
-              Icons.arrow_drop_down,
-              color: Colors.grey[600],
-            ),
+            const Icon(Icons.arrow_drop_down, color: AppColors.ink2),
           ],
         ),
       ),
@@ -294,15 +312,15 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
+        border: Border.all(color: AppColors.edge),
         borderRadius: BorderRadius.circular(12),
-        color: Colors.grey[50],
+        color: AppColors.shell,
       ),
       child: Row(
         children: [
           Icon(
             _isCompleted ? Icons.check_circle : Icons.circle_outlined,
-            color: _isCompleted ? Colors.green : Colors.grey[600],
+            color: _isCompleted ? AppColors.sage : AppColors.ink3,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -313,7 +331,7 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
                   'Project Status',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey[600],
+                    color: AppColors.ink3,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -323,7 +341,7 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
-                    color: _isCompleted ? Colors.green : Colors.black87,
+                    color: _isCompleted ? AppColors.sage : AppColors.ink,
                   ),
                 ),
               ],
@@ -368,7 +386,7 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
               'Tasks',
               taskCount.toString(),
               Icons.task,
-              Colors.blue,
+              AppColors.terra,
             ),
             const SizedBox(width: 12),
             // Status card
@@ -376,7 +394,7 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
               'Status',
               widget.project.isCompleted ? 'Completed' : 'Active',
               widget.project.isCompleted ? Icons.check_circle : Icons.pending,
-              widget.project.isCompleted ? Colors.green : Colors.orange,
+              widget.project.isCompleted ? AppColors.sage : AppColors.statusReview,
             ),
           ],
         ),
@@ -387,19 +405,19 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.red.shade50,
-              border: Border.all(color: Colors.red.shade200),
+              color: AppColors.blush,
+              border: Border.all(color: AppColors.rust),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               children: [
-                Icon(Icons.warning, color: Colors.red.shade700),
+                Icon(Icons.warning, color: AppColors.rust),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'This project is overdue!',
                     style: TextStyle(
-                      color: Colors.red.shade700,
+                      color: AppColors.rust,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -542,7 +560,7 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
             ),
           ],
         ),
-        backgroundColor: Colors.green[600],
+        backgroundColor: AppColors.sage,
         duration: const Duration(seconds: 3),
         action: SnackBarAction(
           label: 'Dismiss',
@@ -573,7 +591,7 @@ class _UpdateProjectScreenState extends State<UpdateProjectScreen> {
             ),
           ],
         ),
-        backgroundColor: Colors.red[600],
+        backgroundColor: AppColors.rust,
         duration: const Duration(seconds: 3),
         action: SnackBarAction(
           label: 'Dismiss',
