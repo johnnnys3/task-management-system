@@ -177,10 +177,11 @@ class _AppShellState extends State<AppShell> {
 
   Future<void> _performLogout() async {
     try {
+      // No named routes are registered (MaterialApp only sets `home:`) --
+      // AuthenticationWrapper's StreamBuilder swaps to LoginScreen on its
+      // own once the auth state stream emits null. Navigating by name here
+      // hits onUnknownRoute and shows a "Page Not Found" screen instead.
       await context.read<AuthenticationService>().signOut();
-      if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
-      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

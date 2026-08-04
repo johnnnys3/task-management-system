@@ -6,7 +6,6 @@ import 'package:task_management/authentication/user.dart';
 import 'package:task_management/data/task_store.dart';
 import 'package:task_management/models/task.dart' as TaskModel;
 import 'package:task_management/screens/task_details_screen.dart';
-import 'package:task_management/screens/task_creation_screen.dart';
 import 'package:task_management/screens/today_screen.dart';
 import 'package:task_management/theme/app_colors.dart';
 import 'package:task_management/navigation/app_shell.dart';
@@ -65,7 +64,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
 
   TaskViewMode _view = TaskViewMode.list;
   String _selectedFilter = 'All';
-  static const _filterOptions = ['All', 'Mine', 'Due soon', 'Overdue'];
+  static const _filterOptions = ['All', 'Assigned to me', 'Open', 'Overdue', 'Done'];
 
   @override
   bool get wantKeepAlive => true;
@@ -112,12 +111,14 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
 
   bool _matchesFilter(TaskModel.Task task) {
     switch (_selectedFilter) {
-      case 'Mine':
+      case 'Assigned to me':
         return task.assignedTo == widget.userId;
-      case 'Due soon':
-        return task.isDueSoon;
+      case 'Open':
+        return !task.isCompleted;
       case 'Overdue':
         return task.isOverdue;
+      case 'Done':
+        return task.isCompleted;
       default:
         return true; // 'All'
     }
@@ -146,16 +147,6 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
       children: [
         _buildContent(),
         if (_isLoading) _buildLoadingOverlay(),
-        Positioned(
-          right: 16,
-          bottom: 16,
-          child: FloatingActionButton.extended(
-            onPressed: _navigateToCreateTask,
-            icon: const Icon(Icons.add),
-            label: const Text('Create Task'),
-            backgroundColor: AppColors.terra,
-          ),
-        ),
       ],
     );
   }
@@ -257,7 +248,6 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
       children: [
         _buildToolbar(),
         if (_errorMessage.isNotEmpty) _buildErrorMessage(),
-        _buildTaskStatistics(),
         Expanded(
           child: _filteredTasks.isEmpty
               ? _buildEmptyState()
@@ -276,7 +266,7 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
       decoration: BoxDecoration(
         color: AppColors.rust.withOpacity(0.08),
         border: Border.all(color: AppColors.rust.withOpacity(0.3)),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
@@ -304,80 +294,8 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
   /// Builds loading overlay
   /// Shows loading indicator during operations
   Widget _buildLoadingOverlay() {
-    return Container(
-      color: Colors.black.withOpacity(0.5),
-      child: const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Loading tasks...'),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Builds task statistics
-  /// Shows count of tasks by status
-  Widget _buildTaskStatistics() {
-    final completedCount = _tasks.where((task) => task.isCompleted).length;
-    final pendingCount = _tasks.where((task) => !task.isCompleted).length;
-    final overdueCount = _tasks.where((task) => task.isOverdue).length;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          _buildStatCard('Total', _tasks.length.toString(), AppColors.terra),
-          const SizedBox(width: 8),
-          _buildStatCard('Completed', completedCount.toString(), AppColors.sage),
-          const SizedBox(width: 8),
-          _buildStatCard('Pending', pendingCount.toString(), AppColors.statusReview),
-          const SizedBox(width: 8),
-          _buildStatCard('Overdue', overdueCount.toString(), AppColors.rust),
-        ],
-      ),
-    );
-  }
-
-  /// Builds individual statistic card
-  /// Creates styled card for task count
-  Widget _buildStatCard(String label, String count, Color color) {
-    return Expanded(
-      child: Card(
-        elevation: 2,
-        color: color.withOpacity(0.1),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Column(
-            children: [
-              Text(
-                count,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return const Center(
+      child: CircularProgressIndicator(color: AppColors.terra),
     );
   }
 
@@ -460,55 +378,53 @@ class _TaskListScreenState extends State<TaskListScreen> with AutomaticKeepAlive
     );
   }
 
-  /// Board view: horizontally scrollable columns, one per status.
+  /// Board view: horizontally scrollable columns on narrow screens, four
+  /// fixed-width scrollable columns side by side at >= 900px.
   Widget _buildBoardView() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = [
           for (var i = 0; i < _kStatusOrder.length; i++)
-            Padding(
-              padding: const EdgeInsets.only(right: 11),
-              child: _BoardColumn(
-                status: _kStatusOrder[i],
-                tasks: _filteredTasks.where((t) => t.status == _kStatusOrder[i]).toList(),
-                onOpen: _navigateToTaskDetailsScreen,
-                onMoveBack: i > 0 ? (t) => _moveStatus(t, -1) : null,
-                onMoveForward: i < _kStatusOrder.length - 1 ? (t) => _moveStatus(t, 1) : null,
-              ),
+            _BoardColumn(
+              status: _kStatusOrder[i],
+              tasks: _filteredTasks.where((t) => t.status == _kStatusOrder[i]).toList(),
+              onOpen: _navigateToTaskDetailsScreen,
+              onMoveBack: i > 0 ? (t) => _moveStatus(t, -1) : null,
+              onMoveForward: i < _kStatusOrder.length - 1 ? (t) => _moveStatus(t, 1) : null,
+              width: constraints.maxWidth >= 900 ? double.infinity : null,
             ),
-        ],
-      ),
-    );
-  }
+        ];
 
-  /// Navigates to task creation screen
-  /// Handles task creation and result
-  Future<void> _navigateToCreateTask() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const CreateTask(availableProjects: []),
-      ),
-    );
+        if (constraints.maxWidth >= 900) {
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final column in columns)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 11),
+                      child: SingleChildScrollView(child: column),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        }
 
-    if (result != null && result is TaskModel.Task) {
-      try {
-        setState(() {
-          _isLoading = true;
-          _errorMessage = '';
-        });
-        await _taskStore.create(result.copyWith(assignedTo: widget.userId));
-        await _loadTasks();
-      } catch (e) {
-        setState(() {
-          _errorMessage = 'Error adding task: $e';
-          _isLoading = false;
-        });
-      }
-    }
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final column in columns) Padding(padding: const EdgeInsets.only(right: 11), child: column),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   /// Navigates to task details screen
@@ -530,6 +446,7 @@ class _BoardColumn extends StatelessWidget {
     required this.onOpen,
     required this.onMoveBack,
     required this.onMoveForward,
+    this.width,
   });
 
   final TaskModel.TaskStatus status;
@@ -537,11 +454,12 @@ class _BoardColumn extends StatelessWidget {
   final void Function(TaskModel.Task) onOpen;
   final void Function(TaskModel.Task)? onMoveBack;
   final void Function(TaskModel.Task)? onMoveForward;
+  final double? width;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 260,
+      width: width ?? 260,
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(color: AppColors.sand, borderRadius: BorderRadius.circular(24)),
       child: Column(

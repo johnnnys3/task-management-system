@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:task_management/models/task.dart';
 import 'package:task_management/data/task_store.dart';
 import 'package:task_management/theme/app_colors.dart';
+import 'package:task_management/widgets/app_card.dart';
 import 'package:task_management/widgets/pill_button.dart';
 import 'package:task_management/navigation/app_shell.dart';
 import 'task_details_screen.dart';
@@ -272,96 +273,80 @@ class _NotificationScreenState extends State<NotificationScreen> {
     
     return RefreshIndicator(
       onRefresh: _loadNotifications,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(8),
-        itemCount: _filteredNotifications.length,
-        itemBuilder: (context, index) {
-          final notification = _filteredNotifications[index];
-          return _buildNotificationCard(notification);
-        },
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          AppCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                for (int i = 0; i < _filteredNotifications.length; i++) ...[
+                  _buildNotificationRow(_filteredNotifications[i]),
+                  if (i != _filteredNotifications.length - 1)
+                    const Divider(height: 1, indent: 16, endIndent: 16),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  /// Builds individual notification card
-  /// Includes status indicators and action buttons
-  Widget _buildNotificationCard(NotificationItem notification) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      elevation: 0,
-      color: notification.isRead ? AppColors.paper : AppColors.sand,
+  /// Builds a single notification row: colored icon circle, title/body/time,
+  /// with a faint terra tint on unread rows.
+  Widget _buildNotificationRow(NotificationItem notification) {
+    return Material(
+      color: notification.isRead ? Colors.transparent : AppColors.terra.withOpacity(0.09),
       child: InkWell(
-        borderRadius: BorderRadius.circular(26),
         onTap: () => _handleNotificationTap(notification),
+        onLongPress: () => _showNotificationMenu(notification),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Notification icon and status
               Container(
-                width: 40,
-                height: 40,
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: _getNotificationColor(notification.type),
-                  borderRadius: BorderRadius.circular(20),
+                  shape: BoxShape.circle,
                 ),
                 child: Icon(
                   _getNotificationIcon(notification.type),
                   color: Colors.white,
-                  size: 20,
+                  size: 17,
                 ),
               ),
               const SizedBox(width: 12),
-              // Notification content
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       notification.title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                      style: TextStyle(
+                        fontWeight: notification.isRead ? FontWeight.w600 : FontWeight.w700,
+                        fontSize: 15,
                         color: AppColors.ink,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
                       notification.message,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: AppColors.ink2,
-                      ),
+                      style: const TextStyle(fontSize: 13.5, color: AppColors.ink2),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Text(
                       _formatTimestamp(notification.timestamp),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.ink3,
-                      ),
+                      style: const TextStyle(fontSize: 11.5, color: AppColors.ink3),
                     ),
                   ],
                 ),
-              ),
-              // Action buttons
-              Column(
-                children: [
-                  if (!notification.isRead)
-                    IconButton(
-                      icon: const Icon(Icons.mark_email_read, size: 20, color: AppColors.ink2),
-                      tooltip: 'Mark as Read',
-                      onPressed: () => _markAsRead(notification),
-                    ),
-                  IconButton(
-                    icon: const Icon(Icons.more_vert, size: 20, color: AppColors.ink2),
-                    tooltip: 'More Options',
-                    onPressed: () => _showNotificationMenu(notification),
-                  ),
-                ],
               ),
             ],
           ),
@@ -506,36 +491,38 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   void _showNotificationMenu(NotificationItem notification) {
-    // Implement notification menu
+    if (!notification.isRead) _markAsRead(notification);
   }
 
   Color _getNotificationColor(NotificationType type) {
     switch (type) {
-      case NotificationType.taskDue:
-        return AppColors.statusReview;
       case NotificationType.taskOverdue:
         return AppColors.rust;
-      case NotificationType.taskCompleted:
-        return AppColors.sage;
-      case NotificationType.taskAssigned:
+      case NotificationType.taskDue:
         return AppColors.terra;
+      case NotificationType.taskAssigned:
+        return AppColors.sage;
+      case NotificationType.taskCompleted:
+        return AppColors.terraDark;
+      // ponytail: the model has no "comment" notification type, so
+      // taskUpdated reuses the design's amber-brown "comment" slot.
       case NotificationType.taskUpdated:
-        return AppColors.ink2;
+        return const Color(0xFFB07D3A);
       }
   }
 
   IconData _getNotificationIcon(NotificationType type) {
     switch (type) {
-      case NotificationType.taskDue:
-        return Icons.timer;
       case NotificationType.taskOverdue:
-        return Icons.error;
+        return Icons.priority_high;
+      case NotificationType.taskDue:
+        return Icons.schedule;
+      case NotificationType.taskAssigned:
+        return Icons.person_add;
       case NotificationType.taskCompleted:
         return Icons.check;
-      case NotificationType.taskAssigned:
-        return Icons.person;
       case NotificationType.taskUpdated:
-        return Icons.update;
+        return Icons.chat_bubble;
       }
   }
 

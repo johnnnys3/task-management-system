@@ -16,6 +16,11 @@ void main() {
     );
   }
 
+  // The header's completion toggle is the sole GestureDetector wrapping an
+  // AnimatedContainer circle -- tapping it exercises the same
+  // TaskStore.update path the old "Mark Complete" button used to.
+  Finder completionToggle() => find.byWidgetPredicate((w) => w is GestureDetector && w.child is AnimatedContainer);
+
   testWidgets('marking a task complete calls through to TaskStore.update', (tester) async {
     final store = InMemoryTaskStore();
     final id = await store.create(const Task(
@@ -26,8 +31,7 @@ void main() {
     final task = (await store.fetch()).single;
 
     await tester.pumpWidget(wrap(store, task));
-    await tester.ensureVisible(find.text('Mark Complete'));
-    await tester.tap(find.text('Mark Complete'));
+    await tester.tap(completionToggle());
     await tester.pumpAndSettle();
 
     final updated = (await store.fetch()).firstWhere((t) => t.id == id);
@@ -44,11 +48,10 @@ void main() {
     final task = (await store.fetch()).single;
 
     await tester.pumpWidget(wrap(store, task));
-    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.ensureVisible(find.widgetWithText(OutlinedButton, 'Delete'));
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Delete Task').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Delete').last);
+    await tester.tap(find.widgetWithText(TextButton, 'Delete').last);
     await tester.pumpAndSettle();
 
     expect(await store.fetch(), isEmpty);
@@ -59,8 +62,7 @@ void main() {
     const task = Task(id: 'missing', title: 'Ghost task', description: 'A valid description text');
 
     await tester.pumpWidget(wrap(store, task));
-    await tester.ensureVisible(find.text('Mark Complete'));
-    await tester.tap(find.text('Mark Complete'));
+    await tester.tap(completionToggle());
     await tester.pumpAndSettle();
 
     expect(find.textContaining('TaskNotFoundException'), findsOneWidget);
@@ -78,8 +80,7 @@ void main() {
     final task = Task(id: id, title: '', description: 'A valid description text');
 
     await tester.pumpWidget(wrap(store, task));
-    await tester.ensureVisible(find.text('Mark Complete'));
-    await tester.tap(find.text('Mark Complete'));
+    await tester.tap(completionToggle());
     await tester.pumpAndSettle();
 
     expect(find.textContaining('TaskValidationException'), findsOneWidget);

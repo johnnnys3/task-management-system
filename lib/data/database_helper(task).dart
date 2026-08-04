@@ -158,10 +158,18 @@ class TaskDatabase implements TaskStore {
   }
 
   List<Task> _mapDocs(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
-    return docs.map((doc) {
+    final tasks = <Task>[];
+    for (final doc in docs) {
       final data = doc.data();
       data['id'] = doc.id;
-      return Task.fromMap(data);
-    }).toList();
+      try {
+        tasks.add(Task.fromMap(data));
+      } catch (e) {
+        // ponytail: one malformed doc shouldn't blank the whole list for
+        // every screen that fetches all tasks -- skip and log instead.
+        _logger.warning('Skipping malformed task doc ${doc.id}: $e');
+      }
+    }
+    return tasks;
   }
 }

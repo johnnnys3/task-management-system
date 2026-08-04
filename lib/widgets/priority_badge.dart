@@ -8,6 +8,8 @@ class PriorityBadge extends StatelessWidget {
 
   const PriorityBadge({super.key, required this.priority});
 
+  static String labelOf(TaskPriority p) => _label(p);
+
   static String _label(TaskPriority p) {
     switch (p) {
       case TaskPriority.urgent:

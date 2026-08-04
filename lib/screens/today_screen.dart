@@ -78,10 +78,7 @@ class _TodayScreenState extends State<TodayScreen> {
     final open = _tasks.where((t) => !t.isCompleted).toList();
     final overdue = open.where((t) => t.isOverdue).toList();
     final dueToday = open.where((t) => t.isDueToday).toList();
-    final inProgress = _tasks.where((t) => t.status == TaskStatus.inProgress).toList();
-    final doneThisWeek = _tasks
-        .where((t) => t.isCompleted && t.updatedAt != null && DateTime.now().difference(t.updatedAt!).inDays <= 7)
-        .toList();
+    final completed = _tasks.where((t) => t.isCompleted).toList();
 
     return RefreshIndicator(
       onRefresh: _load,
@@ -92,14 +89,14 @@ class _TodayScreenState extends State<TodayScreen> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: MediaQuery.sizeOf(context).width >= 700 ? 4 : 2,
-            mainAxisSpacing: 11,
-            crossAxisSpacing: 11,
+            mainAxisSpacing: 2,
+            crossAxisSpacing: 2,
             childAspectRatio: 1.9,
             children: [
+              _StatCard(value: open.length, label: 'Open'),
               _StatCard(value: dueToday.length, label: 'Due today'),
               _StatCard(value: overdue.length, label: 'Overdue', alert: overdue.isNotEmpty),
-              _StatCard(value: inProgress.length, label: 'In progress'),
-              _StatCard(value: doneThisWeek.length, label: 'Done this week'),
+              _StatCard(value: completed.length, label: 'Completed'),
             ],
           ),
           if (overdue.isNotEmpty) ...[
@@ -170,10 +167,11 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 15),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
         color: alert ? AppColors.blush : AppColors.paper,
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: const [BoxShadow(color: Color(0x12282624), blurRadius: 2, offset: Offset(0, 1))],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
